@@ -14,7 +14,13 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     authentication_classes = (TokenAuthentication,)
-    permission_classes = (AllowAny,)
+    def get_permissions(self):
+        if self.action == 'list' or self.action == 'retrieve':
+            # Restrict 'list' action to authenticated users only
+            return [IsAuthenticated()]
+        return [permission() for permission in self.permission_classes]
+
+    permission_classes = (AllowAny,)  # Default permission class
 
     @action(methods=['PUT'], detail=True, serializer_class=ChangePasswordSerializer, permission_classes=[IsAuthenticated])
     def change_pass(self, request, pk):
