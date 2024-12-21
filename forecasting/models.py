@@ -2,12 +2,16 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 
-def upload_path_handler(instance, filename):
-    return "avatars/{id}/{file}".format(id=instance.user.id, file=filename)
+def profile_pic_upload_path_handler(instance):
+    return "avatars/{id}/profile_pic.jpg".format(id=instance.user.id)
+def parameters_upload_path_handler(instance, filename):
+    return "parameters/{user_id}_{group_id}/parameters.txt".format(user_id=instance.user.id, group_id=instance.group.id)
+def timeseries_upload_path_handler(instance, filename):
+    return "timeseries/{user_id}_{group_id}/timeseries.txt".format(user_id=instance.user.id, group_id=instance.group.id)
 
 class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name='profile', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to=upload_path_handler, blank=True)
+    image = models.ImageField(upload_to=profile_pic_upload_path_handler, blank=True)
     bio = models.CharField(max_length=256, blank=True, null=True)
 
 class Group(models.Model):
@@ -36,7 +40,7 @@ class TimeSeriesData(models.Model):
     group = models.ForeignKey(Group, related_name='timeseries', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='uploaded_timeseries', on_delete=models.CASCADE)
     file = models.FileField(
-        upload_to='timeseries/',
+        upload_to=timeseries_upload_path_handler,
         validators=[FileExtensionValidator(allowed_extensions=['txt'])]
     )
     upload_date = models.DateTimeField(auto_now_add=True)
@@ -46,7 +50,7 @@ class ParameterFile(models.Model):
     group = models.ForeignKey(Group, related_name='parameter_files', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='uploaded_parameters', on_delete=models.CASCADE)
     file = models.FileField(
-        upload_to='parameters/',
+        upload_to=parameters_upload_path_handler,
         validators=[FileExtensionValidator(allowed_extensions=['txt'])],
         blank=True,
         null=True

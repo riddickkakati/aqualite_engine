@@ -284,26 +284,59 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
 
         # Proceed to delete the instance
         return super().destroy(request, *args, **kwargs)
-
+    '''
     @action(methods=['post'], detail=True)
     def run_simulation(self, request, pk=None):
         simulation = self.get_object()
 
-        # Here you would implement the logic to run your forecasting model
-        # This is a placeholder for where you'd call your actual model
         try:
-            # Example placeholder for model execution
-            # result_path = your_forecasting_model.run(simulation)
-            # simulation.set_results_path(result_path)
+            # Get the current working directory
+            owd = os.getcwd()
+
+            # Dynamically generate paths
+            parameter_ranges_path = os.path.join(owd, "config", "parameters_depth=14m.yaml")
+            forward_parameters_path = os.path.join(owd, "config", "parameters_forward.yaml")
+            air2water_calibration_path = simulation.timeseries.file.name
+            air2stream_calibration_path = simulation.timeseries.file.name
+            user_validation_path = os.path.join(owd, "data", "stndrck_sat_cv3.txt")
+
+            # Instantiate and run the model
+            Run = Air2water_OOP(
+                method="SpotPY",
+                optimizer="PSO",
+                swarmsize=10,
+                maxiter=10,
+                core=1,
+                parameter_ranges=parameter_ranges_path,
+                forward_parameters=forward_parameters_path,
+                air2waterusercalibrationpath=air2water_calibration_path,
+                air2streamusercalibrationpath=air2stream_calibration_path,
+                uservalidationpath=user_validation_path,
+                computeparameters=False
+            )
+
+            # Run the simulation
+            run_count, num_missing_col3 = Run.run()
+
+            # Save simulation results if needed (you can update the `simulation` object)
+            simulation.status = "completed"
+            simulation.save()
 
             return Response({
-                'message': 'Simulation started successfully',
-                'simulation_id': simulation.id
+                'message': 'Simulation ran successfully',
+                'simulation_id': simulation.id,
+                'run_count': run_count,
+                'num_missing_col3': num_missing_col3
             }, status=status.HTTP_200_OK)
         except Exception as e:
+            # Handle errors
+            simulation.status = "failed"
+            simulation.save()
+
             return Response({
                 'message': f'Error running simulation: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
+    '''
 
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
