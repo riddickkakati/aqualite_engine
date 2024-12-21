@@ -47,7 +47,7 @@ class ParameterFile(models.Model):
     user = models.ForeignKey(User, related_name='uploaded_parameters', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to='parameters/',
-        validators=[FileExtensionValidator(allowed_extensions=['csv'])],
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
         blank=True,
         null=True
     )
@@ -78,6 +78,7 @@ class SimulationRun(models.Model):
     group = models.ForeignKey(Group, related_name='simulations', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='simulation_runs', on_delete=models.CASCADE)
     timeseries = models.ForeignKey(TimeSeriesData, related_name='simulations', on_delete=models.CASCADE)
+    parameters = models.ForeignKey(ParameterFile, related_name='forward_simulations', on_delete=models.CASCADE)
 
     # Basic simulation parameters
     mode = models.CharField(max_length=1, choices=MODE_CHOICES)
