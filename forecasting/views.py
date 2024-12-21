@@ -295,7 +295,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
 
             # Dynamically generate paths
             parameter_ranges_path = os.path.join(owd, "config", "parameters_depth=14m.yaml")
-            forward_parameters_path = os.path.join(owd, "config", "parameters_forward.yaml")
+            forward_parameters_path = simulation.parameters.file.name)
             air2water_calibration_path = simulation.timeseries.file.name
             air2stream_calibration_path = simulation.timeseries.file.name
             user_validation_path = os.path.join(owd, "data", "stndrck_sat_cv3.txt")

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile
+from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameters, LatinParameters, MonteCarloParameters
 
 
 @admin.register(UserProfile)
@@ -26,11 +26,11 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-        'group', 'user', 'timeseries', 'parameters', 'mode',
+        'group', 'user', 'timeseries', 'parameters', 'model', 'mode',
         'error_metric', 'solver', 'status'
     )
     list_display = (
-        'id', 'group', 'user', 'timeseries', 'parameters', 'mode',
+        'id', 'group', 'user', 'timeseries', 'parameters', 'model', 'mode',
         'error_metric', 'solver', 'status', 'start_time', 'end_time'
     )
 
@@ -43,4 +43,19 @@ class TimeSeriesDataAdmin(admin.ModelAdmin):
 class ParameterFileAdmin(admin.ModelAdmin):
     fields = ('group', 'user', 'file', 'description')
     list_display = ('id', 'group', 'user', 'file', 'upload_date', 'description')
+
+@admin.register(PSOParameters)
+class PSOParametersAdmin(admin.ModelAdmin):
+    fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
+    list_display = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
+@admin.register(LatinParameters)
+class LatinParametersAdmin(admin.ModelAdmin):
+    fields = ('simulation','num_samples',)
+    list_display = ('simulation','num_samples',)
+
+@admin.register(MonteCarloParameters)
+class MonteCarloParametersAdmin(admin.ModelAdmin):
+    fields = ('simulation','num_iterations',)
+    list_display = ('simulation','num_iterations',)
+
 

@@ -59,6 +59,12 @@ class ParameterFile(models.Model):
     description = models.CharField(max_length=256, blank=True)
 
 class SimulationRun(models.Model):
+
+    MODEL_CHOICES = [
+        ('W', 'Air2water'),
+        ('S', 'Air2stream')
+    ]
+
     MODE_CHOICES = [
         ('F', 'Forward Mode'),
         ('P', 'PSO Calibrator'),
@@ -85,6 +91,7 @@ class SimulationRun(models.Model):
     parameters = models.ForeignKey(ParameterFile, related_name='forward_simulations', on_delete=models.CASCADE)
 
     # Basic simulation parameters
+    model = models.CharField(max_length=1, choices=MODEL_CHOICES)
     mode = models.CharField(max_length=1, choices=MODE_CHOICES)
     error_metric = models.CharField(max_length=1, choices=ERROR_METRIC_CHOICES)
     solver = models.CharField(max_length=1, choices=SOLVER_CHOICES)

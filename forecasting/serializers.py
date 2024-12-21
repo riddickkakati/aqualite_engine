@@ -88,19 +88,19 @@ class ParameterFileSerializer(serializers.ModelSerializer):
 class PSOParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = PSOParameters
-        fields = ('swarm_size', 'phi1', 'phi2', 'max_iterations')
+        fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
 
 
 class LatinParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = LatinParameters
-        fields = ('num_samples',)
+        fields = ('simulation','num_samples',)
 
 
 class MonteCarloParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonteCarloParameters
-        fields = ('num_iterations', 'confidence_level')
+        fields = ('simulation','num_iterations')
 
 
 class SimulationRunSerializer(serializers.ModelSerializer):
@@ -115,37 +115,13 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimulationRun
         fields = (
-            'id', 'user', 'group', 'timeseries', 'parameters',
+            'id', 'user', 'group', 'timeseries', 'parameters', 'model',
             'mode', 'error_metric', 'solver', 'status',
             'start_time', 'end_time', 'results_path',
             'pso_params', 'latin_params', 'monte_params'
         )
         read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
 
-    def create(self, validated_data):
-        # Extract nested parameters based on mode
-        mode = validated_data.get('mode')
-        params_data = None
-        params_serializer = None
-
-        if mode == 'pso':
-            params_data = validated_data.pop('pso_params', None)
-            params_serializer = PSOParametersSerializer
-        elif mode == 'latin':
-            params_data = validated_data.pop('latin_params', None)
-            params_serializer = LatinParametersSerializer
-        elif mode == 'monte':
-            params_data = validated_data.pop('monte_params', None)
-            params_serializer = MonteCarloParametersSerializer
-
-        # Create simulation run
-        simulation = SimulationRun.objects.create(**validated_data)
-
-        # Create parameters if provided
-        if params_data and params_serializer:
-            params_serializer().create(dict(simulation=simulation, **params_data))
-
-        return simulation
 
 
 class GroupForecastSerializer(serializers.ModelSerializer):
