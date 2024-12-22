@@ -5,6 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import action
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.parsers import MultiPartParser, FormParser
+from .air2water.Air2water import Air2water_OOP
 from datetime import datetime
 from .models import (
     Group, UserProfile, Member, Comment,
@@ -19,6 +20,7 @@ from .serializers import (
 )
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+import os
 
 
 # Existing ViewSets remain unchanged
@@ -252,91 +254,134 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     def get_queryset(self):
-        # Ensure `get_queryset` always returns a valid queryset
         if self.action in ['list', 'retrieve']:
             return SimulationRun.objects.filter(user=self.request.user.id)
         return SimulationRun.objects.all()
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
-
-        # Check if the instance belongs to the authenticated user
-        if instance.id != request.user.id:
-            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        if instance.user.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."},
+                            status=status.HTTP_403_FORBIDDEN)
         return super().update(request, *args, **kwargs)
 
     def partial_update(self, request, *args, **kwargs):
-        # Restrict partial updates to the current user only
         instance = self.get_object()
-
-        # Check if the instance belongs to the authenticated user
-        if instance.id != request.user.id:
-            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        if instance.user.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."},
+                            status=status.HTTP_403_FORBIDDEN)
         return super().partial_update(request, *args, **kwargs)
 
     def destroy(self, request, *args, **kwargs):
-        # Retrieve the object to be deleted
         instance = self.get_object()
-
-        # Check if the instance belongs to the authenticated user
-        if instance.id != request.user.id:
-            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
-
-        # Proceed to delete the instance
+        if instance.user.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."},
+                            status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
-    '''
+
     @action(methods=['post'], detail=True)
     def run_simulation(self, request, pk=None):
         simulation = self.get_object()
 
+        # Check if simulation belongs to user
+        if simulation.user.id != request.user.id:
+            return Response({"detail": "You cannot run other users' simulations."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Check if simulation is already running
+        if simulation.status == "running":
+            return Response({
+                'message': 'Simulation is already running'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
         try:
-            # Get the current working directory
-            owd = os.getcwd()
+            # Update simulation status to running and save start time
+            simulation.status = "running"
+            simulation.save()
 
-            # Dynamically generate paths
-            parameter_ranges_path = simulation.parameter_ranges_file.name
-            forward_parameters_path = simulation.parameters.file.name
-            air2water_calibration_path = simulation.timeseries.file.name
-            air2stream_calibration_path = simulation.timeseries.file.name
-            user_validation_path = simulation.uservalidationpath.name
+            # Get PSO parameters
+            pso_params = simulation.pso_params
 
-            # Instantiate and run the model
-            Run = Air2water_OOP(
-                method="SpotPY",
-                optimizer="PSO",
-                swarmsize=10,
-                maxiter=10,
-                core=1,
-                parameter_ranges=parameter_ranges_path,
-                forward_parameters=forward_parameters_path,
-                air2waterusercalibrationpath=air2water_calibration_path,
-                air2streamusercalibrationpath=air2stream_calibration_path,
-                uservalidationpath=user_validation_path,
-                computeparameters=False
+            # Build paths for required files
+            base_dir = os.path.dirname(simulation.timeseries.file.path)
+            results_dir = os.path.join(base_dir, f'results_{simulation.id}')
+            os.makedirs(results_dir, exist_ok=True)
+
+            # Initialize model with correct parameters matching __init__
+            model = Air2water_OOP(
+                # Required parameters from HTTP response
+                interpolate=simulation.interpolate,
+                n_data_interpolate=simulation.n_data_interpolate,
+                validation_required=simulation.validation_required,
+                model="air2water" if simulation.model == "W" else "air2stream",
+                core=simulation.core,
+                depth=simulation.depth,
+
+                # PSO parameters from pso_params
+                swarmsize=pso_params.get('swarm_size', 2000),
+                phi1=pso_params.get('phi1', 2.0),
+                phi2=pso_params.get('phi2', 2.0),
+                maxiter=pso_params.get('max_iterations', 2000),
+
+                # Method and mode parameters
+                method="SpotPY" if simulation.method == "S" else "Manual",
+                mode="calibration" if simulation.mode == "C" else "validation",
+
+                # Error metrics and optimization parameters
+                error="RMSE" if simulation.error_metric == "R" else "KGE",
+                optimizer="PSO" if simulation.optimizer == "P" else "SCE-UA",
+
+                # Technical parameters
+                solver="cranknicolson" if simulation.solver == "C" else "explicit",
+                compiler="fortran" if simulation.compiler == "F" else "C",
+                CFL=simulation.CFL,
+                databaseformat="custom" if simulation.databaseformat == "C" else "standard",
+
+                # Computation flags
+                computeparametersranges="Yes" if simulation.computeparameterranges else "No",
+                computeparameters="Yes" if simulation.computeparameters else "No",
+
+                # File paths
+                parameter_ranges=simulation.parameter_ranges_file.path if simulation.parameter_ranges_file else None,
+                forward_parameters=None,  # Add if needed
+                air2waterusercalibrationpath=simulation.timeseries.file.path,
+                air2streamusercalibrationpath=simulation.timeseries.file.path,
+                uservalidationpath=simulation.uservalidationpath,
+
+                # Additional parameters
+                log_flag=1 if simulation.log_flag else 0,
+                resampling_frequency_days=simulation.resampling_frequency_days,
+                resampling_frequency_weeks=simulation.resampling_frequency_weeks,
+                email_send=1 if simulation.email_send else 0,
+                email_list=simulation.email_list.split(',') if simulation.email_list else []
             )
 
             # Run the simulation
-            run_count, num_missing_col3 = Run.run()
+            run_count, num_missing_col3 = model.run()
 
-            # Save simulation results if needed (you can update the `simulation` object)
+            # Update simulation with results
             simulation.status = "completed"
+            #simulation.end_time = timezone.now()
+            simulation.results_path = results_dir
             simulation.save()
 
             return Response({
-                'message': 'Simulation ran successfully',
+                'message': 'Simulation completed successfully',
                 'simulation_id': simulation.id,
                 'run_count': run_count,
-                'num_missing_col3': num_missing_col3
+                'num_missing_col3': num_missing_col3,
+                'results_path': simulation.results_path
             }, status=status.HTTP_200_OK)
+
         except Exception as e:
-            # Handle errors
+            # Update simulation status to failed
             simulation.status = "failed"
+            #simulation.end_time = timezone.now()
             simulation.save()
 
             return Response({
                 'message': f'Error running simulation: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
-    '''
 
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
