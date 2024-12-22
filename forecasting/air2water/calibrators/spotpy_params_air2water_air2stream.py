@@ -5,6 +5,8 @@ import numpy as np
 import spotpy
 import os
 import numpy.ma as ma
+from django.conf import settings
+
 
 
 class spot_setup(object):
@@ -15,7 +17,7 @@ class spot_setup(object):
         # Find Path to Hymod on users system
         self.mode2=mode2
         self.parameters = parameters
-        self.owd = "/home/dicam01/DEV/Work/air2water"#os.getcwd()#Activate this for PyCharm
+        self.owd = settings.MEDIA_ROOT
         self.metric = metric
         self.optimizer = optimizer
         self.threshold = threshold

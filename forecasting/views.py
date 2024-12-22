@@ -302,6 +302,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             # Get PSO parameters
             pso_params = simulation.pso_params
 
+
             # Build paths for required files
             base_dir = os.path.dirname(simulation.timeseries.file.path)
             results_dir = os.path.join(base_dir, f'results_{simulation.id}')
@@ -318,13 +319,14 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 depth=simulation.depth,
 
                 # PSO parameters from pso_params
-                swarmsize=pso_params.get('swarm_size', 2000),
-                phi1=pso_params.get('phi1', 2.0),
-                phi2=pso_params.get('phi2', 2.0),
-                maxiter=pso_params.get('max_iterations', 2000),
+                swarmsize=pso_params.swarm_size,
+                phi1=pso_params.phi1,
+                phi2=pso_params.phi2,
+                maxiter=pso_params.max_iterations,
+                omega=pso_params.omega,
 
                 # Method and mode parameters
-                method="SpotPY" if simulation.method == "S" else "Manual",
+                method="SpotPY" if simulation.method == "S" else "PYCUP",
                 mode="calibration" if simulation.mode == "C" else "validation",
 
                 # Error metrics and optimization parameters
@@ -357,7 +359,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             )
 
             # Run the simulation
-            run_count, num_missing_col3 = model.run()
+            num_missing_col3 = model.run()
 
             # Update simulation with results
             simulation.status = "completed"
@@ -368,7 +370,6 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             return Response({
                 'message': 'Simulation completed successfully',
                 'simulation_id': simulation.id,
-                'run_count': run_count,
                 'num_missing_col3': num_missing_col3,
                 'results_path': simulation.results_path
             }, status=status.HTTP_200_OK)
