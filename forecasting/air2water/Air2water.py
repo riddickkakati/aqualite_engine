@@ -826,6 +826,12 @@ class Air2water_OOP:
                     bestindex, bestobjf = spotpy.analyser.get_minlikeindex(common_data)
                     best_model_run = common_data[bestindex]
 
+            '''
+            
+            
+            Fix results.db logic here
+            
+            '''
             #db_file_location = owd
             #shutil.copy(db_file_location, datafolder + os.sep + str(f'{self.optimizer}_results.db'))
             print("Total Time Taken:", time.time() - start_time)
@@ -896,6 +902,14 @@ class Air2water_OOP:
         df_final_means_original.to_sql(f"{self.results_file_name[:-3]}", conn, if_exists='replace', index=False)
         conn.close()
         df_final_means_original.to_csv(f"{self.results_file_name[:-3]}.csv", index=False)
+
+        '''
+
+
+                    Fix results.db logic here
+
+         '''
+
         #results_file_location = str(owd + os.sep + self.results_file_name)
         #shutil.copy(results_file_location, datafolder + os.sep + str(f'results.db'))
 
