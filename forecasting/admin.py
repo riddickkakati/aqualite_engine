@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameters, LatinParameters, MonteCarloParameters
+from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 
 
 @admin.register(UserProfile)
@@ -26,11 +26,11 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-        'group', 'user', 'timeseries', 'parameters', 'model', 'mode',
+        'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'forward_options',
         'error_metric', 'solver', 'status'
     )
     list_display = (
-        'id', 'group', 'user', 'timeseries', 'parameters', 'model', 'mode',
+        'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'forward_options',
         'error_metric', 'solver', 'status', 'start_time', 'end_time'
     )
 
@@ -44,16 +44,23 @@ class ParameterFileAdmin(admin.ModelAdmin):
     fields = ('group', 'user', 'file', 'description')
     list_display = ('id', 'group', 'user', 'file', 'upload_date', 'description')
 
-@admin.register(PSOParameters)
+@admin.register(ForwardParameter)
+class ForwardParametersAdmin(admin.ModelAdmin):
+    fields = ('group', 'user', 'parameter1', 'parameter2', 'parameter3',
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
+    list_display =  ('id', 'group', 'user', 'parameter1', 'parameter2', 'parameter3',
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
+
+@admin.register(PSOParameter)
 class PSOParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
     list_display = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
-@admin.register(LatinParameters)
+@admin.register(LatinParameter)
 class LatinParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','num_samples',)
     list_display = ('simulation','num_samples',)
 
-@admin.register(MonteCarloParameters)
+@admin.register(MonteCarloParameter)
 class MonteCarloParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','num_iterations',)
     list_display = ('simulation','num_iterations',)

@@ -4,7 +4,7 @@ from rest_framework.authtoken.models import Token
 from .models import (
     Group, UserProfile, Member, Comment,
     TimeSeriesData, ParameterFile, SimulationRun,
-    PSOParameters, LatinParameters, MonteCarloParameters
+    PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 )
 from django.db.models import Sum
 
@@ -81,25 +81,31 @@ class TimeSeriesDataSerializer(serializers.ModelSerializer):
 class ParameterFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParameterFile
-        fields = ('id', 'group', 'user', 'file', 'upload_date', 'description')
+        fields = ('group', 'user', 'file', 'upload_date', 'description')
         read_only_fields = ('upload_date',)
+
+class ForwardParametersSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ForwardParameter
+        fields = ('group', 'user', 'parameter1', 'parameter2', 'parameter3',
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
 
 
 class PSOParametersSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PSOParameters
+        model = PSOParameter
         fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
 
 
 class LatinParametersSerializer(serializers.ModelSerializer):
     class Meta:
-        model = LatinParameters
+        model = LatinParameter
         fields = ('simulation','num_samples',)
 
 
 class MonteCarloParametersSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MonteCarloParameters
+        model = MonteCarloParameter
         fields = ('simulation','num_iterations')
 
 
@@ -107,7 +113,8 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     user = UserSerializer()
     group = GroupSerializer()
     timeseries = TimeSeriesDataSerializer()
-    parameters = ParameterFileSerializer()
+    parameters_file = ParameterFileSerializer(required=False)
+    parameters_forward = ForwardParametersSerializer(required=False)
     pso_params = PSOParametersSerializer(required=False)
     latin_params = LatinParametersSerializer(required=False)
     monte_params = MonteCarloParametersSerializer(required=False)
@@ -115,12 +122,51 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimulationRun
         fields = (
-            'id', 'user', 'group', 'timeseries', 'parameters', 'model',
-            'mode', 'error_metric', 'solver', 'status',
+            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'model',
+            'mode', 'forward_options', 'error_metric', 'solver', 'status',
             'start_time', 'end_time', 'results_path',
             'pso_params', 'latin_params', 'monte_params'
         )
         read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+
+        if instance.mode == 'P':
+            representation.pop('latin_params', None)
+            representation.pop('monte_params', None)
+            representation.pop('parameters_forward', None)
+            representation.pop('parameters_file', None)
+            representation.pop('forward_options', None)
+
+        elif instance.mode == 'L':
+            representation.pop('pso_params', None)
+            representation.pop('monte_params', None)
+            representation.pop('parameters_forward', None)
+            representation.pop('parameters_file', None)
+            representation.pop('forward_options', None)
+
+        elif instance.mode == 'M':
+            representation.pop('pso_params', None)
+            representation.pop('latin_params', None)
+            representation.pop('parameters_forward', None)
+            representation.pop('parameters_file', None)
+            representation.pop('forward_options', None)
+
+        elif instance.mode == 'F':
+            representation.pop('pso_params', None)
+            representation.pop('latin_params', None)
+            representation.pop('monte_params', None)
+
+            if instance.forward_options == 'U':
+                representation.pop('parameters_forward', None)
+
+            elif instance.forward_options == 'W':
+                representation.pop('parameters_file', None)
+
+
+
+        return representation
 
 
 

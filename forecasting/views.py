@@ -9,7 +9,7 @@ from datetime import datetime
 from .models import (
     Group, UserProfile, Member, Comment,
     TimeSeriesData, ParameterFile, SimulationRun,
-    PSOParameters, LatinParameters, MonteCarloParameters
+    PSOParameter, LatinParameter, MonteCarloParameter
 )
 from .serializers import (
     GroupSerializer, GroupFullSerializer, GroupForecastSerializer,
