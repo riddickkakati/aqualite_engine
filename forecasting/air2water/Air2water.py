@@ -14,6 +14,7 @@ import numpy as np
 import sqlite3
 import pandas as pd
 import os
+import glob
 import yaml
 import fnmatch
 from .IO.yaml_parser import read_yaml
@@ -247,8 +248,8 @@ class Air2water_OOP:
         date = [datetime(int(y), int(m), int(d)) for y, m, d in zip(Y, M, D)]
         return date,np.asarray([d.timetuple().tm_yday / 366 for d in date])
 
-    def __init__(self,spot_setup=spot_setup, interpolate=True, n_data_interpolate=7, validation_required=True,
-                 model = "air2water", core=1, depth = 14.0, swarmsize=20, phi1=2.0, phi2=2.0, omega=0.5, maxiter=20, numbersim= 2000, method = 'SpotPY', mode = "calibration", error="RMSE", kge_button=True, rmse_button=True, ns_button=True, db_file = f"SCEUA_hymod.db",
+    def __init__(self, user_id, group_id, spot_setup=spot_setup, interpolate=True, n_data_interpolate=7, validation_required=True,
+                 model = "air2water", core=1, depth = 14.0, swarmsize=20, phi1=2.0, phi2=2.0, omega=0.5, maxiter=20, numbersim= 2000, method = 'SpotPY', mode = "calibration", error="RMSE", kge_button=True, rmse_button=True, ns_button=True, db_file = None,
                  optimizer = "PSO", solver = "cranknicolson", compiler= "fortran", CFL = 0.9, databaseformat = "custom",
                  computeparametersranges = "Yes", computeparameters="No",
                  parameter_ranges=None,
@@ -259,6 +260,8 @@ class Air2water_OOP:
                  log_flag = 1, results_file_name = "results.db", resampling_frequency_days = 1,
                  resampling_frequency_weeks = 1, email_send=0, email_list=['riddick.kakati@unitn.it']):
 
+        self.user_id = user_id
+        self.group_id = group_id
         self.model = model
         self.spot_setup = spot_setup
         self.interpolate = interpolate
@@ -311,32 +314,30 @@ class Air2water_OOP:
             air2_water_params = Air2WaterParameters(self.depth, self.method, self.model)
             if self.computeparametersranges == "No":
                 _, theoritical_parameters = air2_water_params.calculate_parameters()
-                shutil.copy(self.parameter_ranges,
-                            datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
             else:
 
                 if self.model == "air2water":
 
                     parameters, theoretical_parameters = air2_water_params.calculate_parameters()
-                    air2_water_params.save_parameters(self.depth, parameters, theoretical_parameters)
-                    for root,dirs,files in os.walk(owd):
+                    air2_water_params.save_parameters(self.depth, parameters, theoretical_parameters, self.user_id, self.group_id)
+                    for root,dirs,files in os.walk(f"{owd}/parameters/{self.user_id}_{self.group_id}/"):
                         for file in files:
                             if fnmatch.fnmatch(file, 'parameters_depth=*m.yaml'):
                                 self.parameter_ranges = os.path.join(root, file)
-                        shutil.copy(self.parameter_ranges,
-                                    datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
+                        #shutil.copy(self.parameter_ranges,
+                                    #datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
                 else:
                     _, theoritical_parameters = air2_water_params.calculate_parameters()
-                    for root,dirs,files in os.walk(owd):
+                    for root,dirs,files in os.walk(f"{owd}/parameters/{self.user_id}_{self.group_id}/"):
                         for file in files:
                             if fnmatch.fnmatch(file, 'parameters_air2stream.yaml'):
                                 self.parameter_ranges = os.path.join(root, file)
-                        shutil.copy(self.parameter_ranges,
-                                    datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
-        else:
-            if self.computeparameters == "No":
-                shutil.copy(self.forward_parameters,
-                            datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
+                        #shutil.copy(self.parameter_ranges,
+                                    #datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
+        #else:
+           # if self.computeparameters == "No":
+                #shutil.copy(self.forward_parameters,
+                           # datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
             # else:
             #     do find the optimum parameters file, and ask user if run simulation again
 
@@ -355,7 +356,13 @@ class Air2water_OOP:
         #             if fnmatch.fnmatch(file, 'parameters*air2stream.yaml'):
         #                 self.parameter_ranges = file
 
-        all_parameters1 = read_yaml(datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
+        try:
+            filename = glob.glob(f"{owd}/parameters/{self.user_id}_{self.group_id}/parameters_depth=*m.yaml")[0]
+            with open(filename, 'r') as file:
+                all_parameters1 = yaml.safe_load(file)
+        except IndexError:
+            raise FileNotFoundError("No parameters.yml file found in the directory")
+        #all_parameters1 = read_yaml(datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
 
         if self.mode != "forward":
             all_parameters = all_parameters1['Optimizer']['parameters']
@@ -500,16 +507,16 @@ class Air2water_OOP:
             usercalibrationdatapath = self.air2streamusercalibrationpath
 
         df1 = np.loadtxt(usercalibrationdatapath)
-        shutil.copy(usercalibrationdatapath, datafolder + os.sep + str(f'calibration.txt'))
+        #shutil.copy(usercalibrationdatapath, datafolder + os.sep + str(f'calibration.txt'))
 
         uservalidationdatapath = self.uservalidationpath
         if self.validation_required == False:
             df2 = np.loadtxt(uservalidationdatapath)
-            shutil.copy(uservalidationdatapath, datafolder + os.sep + str(f'validation.txt'))
+            #shutil.copy(uservalidationdatapath, datafolder + os.sep + str(f'validation.txt'))
 
         processor = YearlyDataProcessor(df1,self.n_data_interpolate)
         dfint1, num_missing_col3, missing_col3 = processor.mean_year()
-        np.savetxt(datafolder + os.sep + str(f'{self.model}_{self.mode}_calibration.csv'), dfint1, delimiter=",", fmt='%s')
+        np.savetxt(f"{owd}/parameters/{self.user_id}_{self.group_id}/calibration.csv", dfint1, delimiter=",", fmt='%s')
 
         print(f"There are {num_missing_col3} missing data.")
         if self.interpolate == True and num_missing_col3:
@@ -517,7 +524,7 @@ class Air2water_OOP:
             if self.validation_required == False:
                 processor2 = YearlyDataProcessor(df2)
                 dfint2, num_missing_col3_2, missing_col3_2 = processor2.mean_year()
-                np.savetxt(datafolder + os.sep + str(f'{self.model}_{self.mode}_validation.csv'), dfint2, delimiter=",", fmt='%s')
+                np.savetxt(f"{owd}/parameters/{self.user_id}_{self.group_id}/validation.csv", dfint2, delimiter=",", fmt='%s')
                 calibration = dfint1
                 validation = dfint2
             else:
@@ -601,10 +608,10 @@ class Air2water_OOP:
                 elif self.optimizer == "NSGAII":
                     cp.NSGA2.run(pop=self.swarmsize, dim=s.dim, lb=s.lb, ub=s.ub, MaxIter=self.maxiter, fun=self.objective_function_pycup)
 
-                saver = cp.save.RawDataSaver.load("RawResult.rst")
+                saver = cp.save.RawDataSaver.load(f"{owd}/parameters/{self.user_id}_{self.group_id}/RawResult.rst")
                 t = SpotpyDbConverter()
-                t.RawSaver2csv("RawResult.rst", f"{self.spot_setup.db_file[:-3]}.csv")
-                results = spotpy.analyser.load_csv_results(f"{self.spot_setup.db_file[:-3]}")
+                t.RawSaver2csv(f"{owd}/parameters/{self.user_id}_{self.group_id}/RawResult.rst", f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.spot_setup.db_file[:-3]}.csv")
+                results = spotpy.analyser.load_csv_results(f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.spot_setup.db_file[:-3]}.csv")
                 df3 = pd.DataFrame(results)
                 df3 = df3.iloc[:, :9]
                 common_data = results
@@ -612,7 +619,7 @@ class Air2water_OOP:
                 data_list = [float(x) for x in best_results.split(', ')]
                 best_position = np.array(data_list)
                 conn = sqlite3.connect(self.spot_setup.db_file)
-                df3.to_sql(f"{self.spot_setup.db_file[:-3]}", conn, if_exists='replace', index=False)
+                df3.to_sql(f"Calibration_Data", conn, if_exists='replace', index=False)
                 conn.close()
                 df3.to_csv(f"{self.spot_setup.db_file[:-3]}.csv", index=False)
                 print(f"Best Results {self.optimizer}:",
@@ -817,9 +824,9 @@ class Air2water_OOP:
                         print(f"Best Results {self.optimizer}:", best_position)
 
                     conn = sqlite3.connect(self.spot_setup.db_file)
-                    df3.to_sql(f"{self.spot_setup.db_file[:-3]}", conn, if_exists='replace', index=False)
+                    df3.to_sql(f"Calibration_data", conn, if_exists='replace', index=False)
                     conn.close()
-                    df3.to_csv(f"{self.spot_setup.db_file[:-3]}.csv", index=False)
+                    df3.to_csv(f"{owd}/parameters/{self.user_id}_{self.group_id}/self.spot_setup.db_file[:-3].csv", index=False)
                     print(f"Best Results {self.optimizer}:",
                           spotpy.analyser.get_best_parameterset(common_data, maximize=False))
 
@@ -842,7 +849,7 @@ class Air2water_OOP:
             #plt.show()
             plt.ylabel("RMSE")
             plt.xlabel("Iteration")
-            fig.savefig(f"{self.optimizer}_objectivefunctiontrace.png", dpi=100)
+            fig.savefig(f"{owd}/parameters/{self.user_id}_{self.group_id}/objectivefunctiontrace.png", dpi=100)
         else:
             best_position = parameters
             # Plot the best model run
@@ -867,9 +874,9 @@ class Air2water_OOP:
                 info_dict["Optimized"]["parameters"][parameter_name] = float(best_position_array[i])
 
             # Save parameters as YAML file
-            with open(f'{owd}/best_parameters.yaml', 'w') as file:
+            with open(f"{owd}/parameters/{self.user_id}_{self.group_id}/best_parameters.yaml", "w") as file:
                 yaml.dump(info_dict, file, default_flow_style=False)
-            shutil.copy(f'{owd}/best_parameters.yaml', datafolder + os.sep + str(f'best_parameters.yaml'))
+            #shutil.copy(f'{owd}/best_parameters.yaml', datafolder + os.sep + str(f'best_parameters.yaml'))
 
 
             self.spot_setup = self.spot_setup(parameters,
@@ -899,7 +906,7 @@ class Air2water_OOP:
         df_final_means = df_final_means_original.copy()
         df_final_means.set_index('Date', inplace=True)
         conn = sqlite3.connect(self.results_file_name)
-        df_final_means_original.to_sql(f"{self.results_file_name[:-3]}", conn, if_exists='replace', index=False)
+        df_final_means_original.to_sql(f"Calibration_data", conn, if_exists='replace', index=False)
         conn.close()
         df_final_means_original.to_csv(f"{self.results_file_name[:-3]}.csv", index=False)
 
@@ -1017,14 +1024,14 @@ class Air2water_OOP:
         plt.xlabel("Year")
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
-        fig.savefig(f"{self.optimizer}_best_modelrun.png", dpi=100)
+        fig.savefig(f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun.png", dpi=100)
         self.results_time_series = BytesIO()
         fig.savefig(self.results_time_series, format="png", dpi=100)
         self.results_time_series.seek(0)
         plt.close()
 
         if self.email_send == 1:
-            send_email(self.model, self.email_list, datafolder + os.sep + str(f'results.db'))
+            send_email(self.model, self.email_list, self.results_file_name)
 
         if self.mode != "forward":
             parameters_low=[self.spot_setup.parameters[i].minbound for i in range(len(parameters))]

@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.parsers import MultiPartParser, FormParser
 from .air2water.Air2water import Air2water_OOP
+from django.conf import settings
 from datetime import datetime
 from .models import (
     Group, UserProfile, Member, Comment,
@@ -308,16 +309,20 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             results_dir = os.path.join(base_dir, f'results_{simulation.id}')
             os.makedirs(results_dir, exist_ok=True)
 
+
             # Initialize model with correct parameters matching __init__
             model = Air2water_OOP(
                 # Required parameters from HTTP response
+                user_id= simulation.user.id,
+                group_id= simulation.group.id,
                 interpolate=simulation.interpolate,
                 n_data_interpolate=simulation.n_data_interpolate,
                 validation_required=simulation.validation_required,
                 model="air2water" if simulation.model == "W" else "air2stream",
                 core=simulation.core,
                 depth=simulation.depth,
-
+                db_file=f"{settings.MEDIA_ROOT}/parameters/{simulation.user.id}_{simulation.group.id}/calibration.db",
+                results_file_name= f"{settings.MEDIA_ROOT}/parameters/{simulation.user.id}_{simulation.group.id}/results.db",
                 # PSO parameters from pso_params
                 swarmsize=pso_params.swarm_size,
                 phi1=pso_params.phi1,

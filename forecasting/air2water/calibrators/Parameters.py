@@ -3,8 +3,10 @@ from scipy.io import loadmat
 from scipy.interpolate import interp1d
 import os
 import yaml
+from django.conf import settings
 
 class Air2WaterParameters:
+
     def __init__(self, depth, method, model):
         self.owd = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
         self.params_all_depths = str(self.owd + os.sep + "fullparameterset.mat")
@@ -57,17 +59,17 @@ class Air2WaterParameters:
 
         return P, par_theo
 
-    def save_parameters(self, depth, parameters, theoretical_parameters):
+    def save_parameters(self, depth, parameters, theoretical_parameters, user_id, group_id):
+        wd = settings.MEDIA_ROOT
         # Save parameters as text file
-        cwd = os.getcwd()
-        cwd = cwd + os.sep + 'config'
-        if not os.path.exists(cwd):
-            os.makedirs(cwd)
-        with open(f'{cwd}/parameters_depth={depth}m.txt', 'w') as file:
+
+        #if not os.path.exists(cwd):
+           # os.makedirs(cwd)
+        with open(f'{wd}/parameters/{user_id}_{group_id}/parameters_depth={depth}m.txt', 'w') as file:
             np.savetxt(file, parameters, fmt='%15.6e')
 
         # Save theoretical parameters as text file
-        with open(f'{cwd}/theoretical_parameters={depth}m.txt', 'w') as file:
+        with open(f'{wd}/parameters/{user_id}_{group_id}/theoretical_parameters={depth}m.txt', 'w') as file:
             np.savetxt(file, theoretical_parameters, fmt='%15.6e')
 
         # Convert parameters to dictionary with appropriate structure
@@ -86,7 +88,7 @@ class Air2WaterParameters:
             info_dict["Optimizer"]["parameters"][parameter_name] = {'low': float(parameters[0, i]), 'high': float(parameters[1, i]), 'distribution':'Uniform'}
 
         # Save parameters as YAML file
-        with open(f'{cwd}/parameters_depth={depth}m.yaml', 'w') as file:
+        with open(f'{wd}/parameters/{user_id}_{group_id}/parameters_depth={depth}m.yaml', 'w') as file:
             yaml.dump(info_dict, file, default_flow_style=False)
 
         # Convert theoretical parameters to dictionary with appropriate structure
@@ -96,7 +98,7 @@ class Air2WaterParameters:
                                                           'high': float(theoretical_parameters[1, i])}
 
         # Save theoretical parameters as YAML file
-        with open(f'{cwd}/theoretical_parameters={depth}m.yaml', 'w') as file:
+        with open(f'{wd}/parameters/{user_id}_{group_id}/theoretical_parameters={depth}m.yaml', 'w') as file:
             yaml.dump(info_dict, file, default_flow_style=False)
 
 

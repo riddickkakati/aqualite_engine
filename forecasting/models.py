@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
 
 def profile_pic_upload_path_handler(instance, filename):
-    return "avatars/{id}/profile_pic.jpg".format(id=instance.user.id)
+    return "avatars/{user_id}_{group_id}/profile_pic.jpg".format(id=instance.user.id)
 def parameters_upload_path_handler(instance, filename):
     return "parameters/{user_id}_{group_id}/parameters.txt".format(user_id=instance.user.id, group_id=instance.group.id)
 def timeseries_upload_path_handler(instance, filename):
