@@ -122,9 +122,17 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimulationRun
         fields = (
-            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'model',
-            'mode', 'forward_options', 'error_metric', 'solver', 'status',
-            'start_time', 'end_time', 'results_path',
+            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges_file', 'uservalidationpath',
+            # Basic simulation parameters
+            'interpolate', 'n_data_interpolate', 'validation_required', 'core',
+            'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
+            'computeparameters', 'model', 'mode', 'method', 'optimizer',
+            'forward_options', 'error_metric', 'solver', 'log_flag',
+            'resampling_frequency_days', 'resampling_frequency_weeks',
+            'email_send', 'email_list',
+            # Status and results
+            'status', 'start_time', 'end_time', 'results_path',
+            # Optional parameter sets
             'pso_params', 'latin_params', 'monte_params'
         )
         read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
@@ -132,28 +140,7 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if instance.mode == 'P':
-            representation.pop('latin_params', None)
-            representation.pop('monte_params', None)
-            representation.pop('parameters_forward', None)
-            representation.pop('parameters_file', None)
-            representation.pop('forward_options', None)
-
-        elif instance.mode == 'L':
-            representation.pop('pso_params', None)
-            representation.pop('monte_params', None)
-            representation.pop('parameters_forward', None)
-            representation.pop('parameters_file', None)
-            representation.pop('forward_options', None)
-
-        elif instance.mode == 'M':
-            representation.pop('pso_params', None)
-            representation.pop('latin_params', None)
-            representation.pop('parameters_forward', None)
-            representation.pop('parameters_file', None)
-            representation.pop('forward_options', None)
-
-        elif instance.mode == 'F':
+        if instance.mode == 'F':
             representation.pop('pso_params', None)
             representation.pop('latin_params', None)
             representation.pop('monte_params', None)
@@ -164,7 +151,27 @@ class SimulationRunSerializer(serializers.ModelSerializer):
             elif instance.forward_options == 'W':
                 representation.pop('parameters_file', None)
 
+        elif instance.mode == 'C':
+            if instance.optimizer == 'P':
+                representation.pop('latin_params', None)
+                representation.pop('monte_params', None)
+                representation.pop('parameters_forward', None)
+                representation.pop('parameters_file', None)
+                representation.pop('forward_options', None)
 
+            elif instance.optimizer == 'L':
+                representation.pop('pso_params', None)
+                representation.pop('monte_params', None)
+                representation.pop('parameters_forward', None)
+                representation.pop('parameters_file', None)
+                representation.pop('forward_options', None)
+
+            elif instance.optimizer == 'M':
+                representation.pop('pso_params', None)
+                representation.pop('latin_params', None)
+                representation.pop('parameters_forward', None)
+                representation.pop('parameters_file', None)
+                representation.pop('forward_options', None)
 
         return representation
 

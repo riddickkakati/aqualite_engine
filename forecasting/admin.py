@@ -23,15 +23,21 @@ class CommentAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'description')
     list_display = ('user', 'group', 'description', 'time')
 
+
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-        'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'forward_options',
-        'error_metric', 'solver', 'status'
+        'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges_file', 'uservalidationpath', 'model', 'mode', 'method',
+        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'n_data_interpolate',
+        'validation_required', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
+        'computeparameters', 'log_flag', 'resampling_frequency_days', 'resampling_frequency_weeks',
+        'email_send', 'email_list', 'status', 'results_path'
     )
+
     list_display = (
-        'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'forward_options',
-        'error_metric', 'solver', 'status', 'start_time', 'end_time'
+        'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'method',
+        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required',
+        'compiler', 'databaseformat', 'status', 'start_time', 'end_time'
     )
 
 @admin.register(TimeSeriesData)
