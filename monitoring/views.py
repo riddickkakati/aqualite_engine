@@ -292,6 +292,10 @@ class MonitoringRunViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
         monitoring = self.get_object()
+
+        if monitoring.user.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
         response_data = {
             'status': monitoring.status,
             'map_path': monitoring.results_path

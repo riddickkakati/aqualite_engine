@@ -401,6 +401,10 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
         simulation = self.get_object()
+
+        if simulation.user.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
         results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
         response_data = {
             'status': simulation.status,
