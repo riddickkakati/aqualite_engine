@@ -1,4 +1,4 @@
-from django.contrib import admin
+'''from django.contrib import admin
 from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 
 
@@ -27,17 +27,33 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-        'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges_file', 'uservalidationpath', 'model', 'mode', 'method',
-        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'n_data_interpolate',
-        'validation_required', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
-        'computeparameters', 'log_flag', 'resampling_frequency_days', 'resampling_frequency_weeks',
-        'email_send', 'email_list', 'error_message', 'status', 'results_path'
+         'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
+            # Basic simulation parameters
+            'interpolate', 'n_data_interpolate', 'validation_required', 'core',
+            'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
+            'computeparameters', 'model', 'mode', 'method', 'optimizer',
+            'forward_options', 'error_metric', 'solver', 'log_flag',
+            'resampling_frequency_days', 'resampling_frequency_weeks',
+            'email_send', 'email_list',
+            # Status and results
+            'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path',
+            # Optional parameter sets
+            'pso_params', 'latin_params', 'monte_params'
     )
 
     list_display = (
-        'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'method',
-        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required',
-        'compiler', 'databaseformat', 'error_message', 'updated_at', 'status', 'start_time', 'end_time'
+        'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
+            # Basic simulation parameters
+            'interpolate', 'n_data_interpolate', 'validation_required', 'core',
+            'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
+            'computeparameters', 'model', 'mode', 'method', 'optimizer',
+            'forward_options', 'error_metric', 'solver', 'log_flag',
+            'resampling_frequency_days', 'resampling_frequency_weeks',
+            'email_send', 'email_list',
+            # Status and results
+            'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path',
+            # Optional parameter sets
+            'pso_params', 'latin_params', 'monte_params'
     )
 
 @admin.register(TimeSeriesData)
@@ -72,3 +88,4 @@ class MonteCarloParametersAdmin(admin.ModelAdmin):
     list_display = ('simulation','num_iterations',)
 
 
+'''

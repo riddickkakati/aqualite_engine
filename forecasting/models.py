@@ -40,40 +40,6 @@ class Comment(models.Model):
     description = models.CharField(max_length=256, null=False, unique=False)
     time = models.DateTimeField(auto_now_add=True)
 
-class TimeSeriesData(models.Model):
-    group = models.ForeignKey(Group, related_name='timeseries', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='uploaded_timeseries', on_delete=models.CASCADE)
-    file = models.FileField(
-        upload_to=timeseries_upload_path_handler,
-        validators=[FileExtensionValidator(allowed_extensions=['txt'])]
-    )
-    upload_date = models.DateTimeField(auto_now_add=True)
-    description = models.CharField(max_length=256, blank=True)
-
-class ParameterFile(models.Model):
-    group = models.ForeignKey(Group, related_name='parameter_files_group', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='parameter_files_user', on_delete=models.CASCADE)
-    file = models.FileField(
-        upload_to=parameters_upload_path_handler,
-        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
-        blank=True,
-        null=True
-    )
-    upload_date = models.DateTimeField(auto_now_add=True)
-    description = models.CharField(max_length=256, blank=True)
-
-class ForwardParameter(models.Model):
-    group = models.ForeignKey(Group, related_name='parameter_values_group', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='parameter_values_user', on_delete=models.CASCADE)
-    parameter1 = models.FloatField(null=True,blank=True)
-    parameter2 = models.FloatField(null=True, blank=True)
-    parameter3 = models.FloatField(null=True, blank=True)
-    parameter4 = models.FloatField(null=True, blank=True)
-    parameter5 = models.FloatField(null=True, blank=True)
-    parameter6 = models.FloatField(null=True, blank=True)
-    parameter7 = models.FloatField(null=True, blank=True)
-    parameter8 = models.FloatField(null=True, blank=True)
-
 class SimulationRun(models.Model):
 
     MODEL_CHOICES = [
@@ -127,21 +93,6 @@ class SimulationRun(models.Model):
 
     group = models.ForeignKey(Group, related_name='simulations', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='simulation_runs', on_delete=models.CASCADE)
-    timeseries = models.ForeignKey(TimeSeriesData, related_name='simulations', on_delete=models.CASCADE)
-    parameters_file = models.ForeignKey(ParameterFile, related_name='forward_simulations_file', on_delete=models.CASCADE)
-    parameters_forward = models.ForeignKey(ForwardParameter, related_name='forward_simulations_params', on_delete=models.CASCADE)
-    parameter_ranges_file = models.FileField(
-        upload_to=parameter_ranges_upload_path_handler,
-        validators=[FileExtensionValidator(allowed_extensions=['yaml'])],
-        blank=True,
-        null=True
-    )
-    uservalidationpath = models.FileField(
-        upload_to=user_validation_path_handler,
-        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
-        blank=True,
-        null=True
-    )
 
     # Basic simulation parameters
     interpolate = models.BooleanField(default=True)
@@ -175,6 +126,74 @@ class SimulationRun(models.Model):
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
     results_path = models.CharField(max_length=512, null=True, blank=True)
+
+
+class TimeSeriesData(models.Model):
+    group = models.ForeignKey(Group, related_name='timeseries', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='uploaded_timeseries', on_delete=models.CASCADE)
+    file = models.FileField(
+        upload_to=timeseries_upload_path_handler,
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])]
+    )
+    upload_date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=256, blank=True)
+
+
+class ParameterFile(models.Model):
+    group = models.ForeignKey(Group, related_name='parameter_files_group', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='parameter_files_user', on_delete=models.CASCADE)
+    file = models.FileField(
+        upload_to=parameters_upload_path_handler,
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        blank=True,
+        null=True
+    )
+    upload_date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=256, blank=True)
+
+
+class ParameterRangesFile(models.Model):
+    group = models.ForeignKey(Group, related_name='parameter_ranges_group', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='parameter_ranges_user', on_delete=models.CASCADE)
+    file = models.FileField(
+        upload_to=parameter_ranges_upload_path_handler,
+        validators=[FileExtensionValidator(allowed_extensions=['yaml'])],
+        blank=True,
+        null=True
+    )
+    upload_date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=256, blank=True)
+
+
+class UserValidationFile(models.Model):
+    group = models.ForeignKey(Group, related_name='user_validation_group', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='user_validation_user', on_delete=models.CASCADE)
+    file = models.FileField(
+        upload_to=user_validation_path_handler,
+        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        blank=True,
+        null=True
+    )
+    upload_date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(max_length=256, blank=True)
+
+
+class ForwardParameter(models.Model):
+    group = models.ForeignKey(Group, related_name='parameter_values_group', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='parameter_values_user', on_delete=models.CASCADE)
+    simulation = models.OneToOneField(
+        SimulationRun,
+        related_name='forward_parameter_simulation',
+        on_delete=models.CASCADE
+    )
+    parameter1 = models.FloatField(null=True, blank=True)
+    parameter2 = models.FloatField(null=True, blank=True)
+    parameter3 = models.FloatField(null=True, blank=True)
+    parameter4 = models.FloatField(null=True, blank=True)
+    parameter5 = models.FloatField(null=True, blank=True)
+    parameter6 = models.FloatField(null=True, blank=True)
+    parameter7 = models.FloatField(null=True, blank=True)
+    parameter8 = models.FloatField(null=True, blank=True)
 
 class PSOParameter(models.Model):
     simulation = models.OneToOneField(
