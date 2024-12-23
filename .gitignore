@@ -21,7 +21,7 @@ sdist/
 var/
 wheels/
 mediafiles/
-fortran_modules/
+fortran_modules
 share/python-wheels/
 *.egg-info/
 .installed.cfg
