@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "corsheaders",
     "forecasting",
-    "forecasting.air2water"
+    "forecasting.air2water",
+    "monitoring"
 ]
 
 MIDDLEWARE = [
