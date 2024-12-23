@@ -176,7 +176,8 @@ def simulation_air2stream(self, x):
     else:  # The first year of simulation data is ignored (warm-up)
         return sim[366:]
 
-def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse, error_metric):
+def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse, error_metric,user_id,group_id):
+    owd = settings.MEDIA_ROOT
 
     column_order = list(df.columns)
     column_order.insert(0, column_order.pop(-1))
@@ -212,12 +213,10 @@ def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse
                   loc='lower center', ncol=4, frameon=False)
     plt.subplots_adjust(hspace=0.3, wspace=0.4, bottom=0.1)
 
-    # Save the plot to BytesIO object
-    img_data = BytesIO()
-    plt.savefig(img_data, format="png", dpi=100)
+    plt.savefig(f"{owd}/results/{user_id}_{group_id}/dottyplots.png", dpi=100)
     plt.close()  # Close the plot to avoid displaying it
 
-    return img_data
+    return
 
 
 class Air2water_OOP:
@@ -516,7 +515,7 @@ class Air2water_OOP:
 
         processor = YearlyDataProcessor(df1,self.n_data_interpolate)
         dfint1, num_missing_col3, missing_col3 = processor.mean_year()
-        np.savetxt(f"{owd}/parameters/{self.user_id}_{self.group_id}/calibration.csv", dfint1, delimiter=",", fmt='%s')
+        np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/calibration_interpolated.csv", dfint1, delimiter=",", fmt='%s')
 
         print(f"There are {num_missing_col3} missing data.")
         if self.interpolate == True and num_missing_col3:
@@ -524,7 +523,7 @@ class Air2water_OOP:
             if self.validation_required == False:
                 processor2 = YearlyDataProcessor(df2)
                 dfint2, num_missing_col3_2, missing_col3_2 = processor2.mean_year()
-                np.savetxt(f"{owd}/parameters/{self.user_id}_{self.group_id}/validation.csv", dfint2, delimiter=",", fmt='%s')
+                np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/validation_interpolated.csv", dfint2, delimiter=",", fmt='%s')
                 calibration = dfint1
                 validation = dfint2
             else:
@@ -608,10 +607,10 @@ class Air2water_OOP:
                 elif self.optimizer == "NSGAII":
                     cp.NSGA2.run(pop=self.swarmsize, dim=s.dim, lb=s.lb, ub=s.ub, MaxIter=self.maxiter, fun=self.objective_function_pycup)
 
-                saver = cp.save.RawDataSaver.load(f"{owd}/parameters/{self.user_id}_{self.group_id}/RawResult.rst")
+                saver = cp.save.RawDataSaver.load(f"{owd}/results/{self.user_id}_{self.group_id}/RawResult.rst")
                 t = SpotpyDbConverter()
                 t.RawSaver2csv(f"{owd}/parameters/{self.user_id}_{self.group_id}/RawResult.rst", f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.spot_setup.db_file[:-3]}.csv")
-                results = spotpy.analyser.load_csv_results(f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.spot_setup.db_file[:-3]}.csv")
+                results = spotpy.analyser.load_csv_results(f"{owd}/results/{self.user_id}_{self.group_id}/{self.spot_setup.db_file[:-3]}.csv")
                 df3 = pd.DataFrame(results)
                 df3 = df3.iloc[:, :9]
                 common_data = results
@@ -826,19 +825,13 @@ class Air2water_OOP:
                     conn = sqlite3.connect(self.spot_setup.db_file)
                     df3.to_sql(f"Calibration_data", conn, if_exists='replace', index=False)
                     conn.close()
-                    df3.to_csv(f"{owd}/parameters/{self.user_id}_{self.group_id}/self.spot_setup.db_file[:-3].csv", index=False)
+                    df3.to_csv(f"{owd}/results/{self.user_id}_{self.group_id}/self.spot_setup.db_file[:-3].csv", index=False)
                     print(f"Best Results {self.optimizer}:",
                           spotpy.analyser.get_best_parameterset(common_data, maximize=False))
 
                     bestindex, bestobjf = spotpy.analyser.get_minlikeindex(common_data)
                     best_model_run = common_data[bestindex]
 
-            '''
-            
-            
-            Fix results.db logic here
-            
-            '''
             #db_file_location = owd
             #shutil.copy(db_file_location, datafolder + os.sep + str(f'{self.optimizer}_results.db'))
             print("Total Time Taken:", time.time() - start_time)
@@ -849,7 +842,7 @@ class Air2water_OOP:
             #plt.show()
             plt.ylabel("RMSE")
             plt.xlabel("Iteration")
-            fig.savefig(f"{owd}/parameters/{self.user_id}_{self.group_id}/objectivefunctiontrace.png", dpi=100)
+            fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/objectivefunctiontrace.png", dpi=100)
         else:
             best_position = parameters
             # Plot the best model run
@@ -909,13 +902,6 @@ class Air2water_OOP:
         df_final_means_original.to_sql(f"Calibration_data", conn, if_exists='replace', index=False)
         conn.close()
         df_final_means_original.to_csv(f"{self.results_file_name[:-3]}.csv", index=False)
-
-        '''
-
-
-                    Fix results.db logic here
-
-         '''
 
         #results_file_location = str(owd + os.sep + self.results_file_name)
         #shutil.copy(results_file_location, datafolder + os.sep + str(f'results.db'))
@@ -1024,7 +1010,7 @@ class Air2water_OOP:
         plt.xlabel("Year")
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
-        fig.savefig(f"{owd}/parameters/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun.png", dpi=100)
+        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun.png", dpi=100)
         self.results_time_series = BytesIO()
         fig.savefig(self.results_time_series, format="png", dpi=100)
         self.results_time_series.seek(0)
@@ -1036,7 +1022,7 @@ class Air2water_OOP:
         if self.mode != "forward":
             parameters_low=[self.spot_setup.parameters[i].minbound for i in range(len(parameters))]
             parameters_high=[self.spot_setup.parameters[i].maxbound for i in range(len(parameters))]
-            self.Dottyplots= dottyplots(df3,theoretical_parameters,parameters_low,parameters_high,one_day_rmse,self.error)
+            self.Dottyplots= dottyplots(df3,theoretical_parameters,parameters_low,parameters_high,one_day_rmse,self.error,self.user_id,self.group_id)
         else:
             self.Dottyplots=None
 

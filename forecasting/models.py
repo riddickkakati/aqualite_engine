@@ -169,6 +169,8 @@ class SimulationRun(models.Model):
     email_list = models.CharField(max_length=50, blank=True)
 
     # Status and results
+    updated_at = models.DateTimeField(auto_now=True)
+    error_message = models.TextField(null=True, blank=True)
     status = models.CharField(max_length=20, default='pending')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)

@@ -7,6 +7,8 @@ from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.parsers import MultiPartParser, FormParser
 from .air2water.Air2water import Air2water_OOP
 from django.conf import settings
+from django.utils import timezone
+import multiprocessing as mp
 from datetime import datetime
 from .models import (
     Group, UserProfile, Member, Comment,
@@ -280,82 +282,51 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                             status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
 
-    @action(methods=['post'], detail=True)
-    def run_simulation(self, request, pk=None):
-        simulation = self.get_object()
-
-        # Check if simulation belongs to user
-        if simulation.user.id != request.user.id:
-            return Response({"detail": "You cannot run other users' simulations."},
-                            status=status.HTTP_403_FORBIDDEN)
-
-        # Check if simulation is already running
-        if simulation.status == "running":
-            return Response({
-                'message': 'Simulation is already running'
-            }, status=status.HTTP_400_BAD_REQUEST)
-
+    @staticmethod
+    def run_simulation_process(simulation_id):
+        """
+        Static method to run the simulation in a separate process
+        """
+        simulation = None
         try:
-            # Update simulation status to running and save start time
-            simulation.status = "running"
-            simulation.save()
-
-            # Get PSO parameters
-            pso_params = simulation.pso_params
-
+            simulation = SimulationRun.objects.get(pk=simulation_id)
 
             # Build paths for required files
-            base_dir = os.path.dirname(simulation.timeseries.file.path)
-            results_dir = os.path.join(base_dir, f'results_{simulation.id}')
+            results_dir = f"{settings.MEDIA_ROOT}/results/{simulation.user.id}_{simulation.group.id}/"
             os.makedirs(results_dir, exist_ok=True)
 
-
-            # Initialize model with correct parameters matching __init__
+            # Initialize model with correct parameters
             model = Air2water_OOP(
-                # Required parameters from HTTP response
-                user_id= simulation.user.id,
-                group_id= simulation.group.id,
+                user_id=simulation.user.id,
+                group_id=simulation.group.id,
                 interpolate=simulation.interpolate,
                 n_data_interpolate=simulation.n_data_interpolate,
                 validation_required=simulation.validation_required,
                 model="air2water" if simulation.model == "W" else "air2stream",
                 core=simulation.core,
                 depth=simulation.depth,
-                db_file=f"{settings.MEDIA_ROOT}/parameters/{simulation.user.id}_{simulation.group.id}/calibration.db",
-                results_file_name= f"{settings.MEDIA_ROOT}/parameters/{simulation.user.id}_{simulation.group.id}/results.db",
-                # PSO parameters from pso_params
-                swarmsize=pso_params.swarm_size,
-                phi1=pso_params.phi1,
-                phi2=pso_params.phi2,
-                maxiter=pso_params.max_iterations,
-                omega=pso_params.omega,
-
-                # Method and mode parameters
+                db_file=f"{results_dir}/{simulation.method}_calibration.db",
+                results_file_name=f"{results_dir}/results.db",
+                swarmsize=simulation.pso_params.swarm_size,
+                phi1=simulation.pso_params.phi1,
+                phi2=simulation.pso_params.phi2,
+                maxiter=simulation.pso_params.max_iterations,
+                omega=simulation.pso_params.omega,
                 method="SpotPY" if simulation.method == "S" else "PYCUP",
-                mode="calibration" if simulation.mode == "C" else "validation",
-
-                # Error metrics and optimization parameters
+                mode="calibration" if simulation.mode == "C" else "forward",
                 error="RMSE" if simulation.error_metric == "R" else "KGE",
                 optimizer="PSO" if simulation.optimizer == "P" else "SCE-UA",
-
-                # Technical parameters
                 solver="cranknicolson" if simulation.solver == "C" else "explicit",
                 compiler="fortran" if simulation.compiler == "F" else "C",
                 CFL=simulation.CFL,
                 databaseformat="custom" if simulation.databaseformat == "C" else "standard",
-
-                # Computation flags
                 computeparametersranges="Yes" if simulation.computeparameterranges else "No",
                 computeparameters="Yes" if simulation.computeparameters else "No",
-
-                # File paths
                 parameter_ranges=simulation.parameter_ranges_file.path if simulation.parameter_ranges_file else None,
-                forward_parameters=None,  # Add if needed
+                forward_parameters=None,
                 air2waterusercalibrationpath=simulation.timeseries.file.path,
                 air2streamusercalibrationpath=simulation.timeseries.file.path,
                 uservalidationpath=simulation.uservalidationpath,
-
-                # Additional parameters
                 log_flag=1 if simulation.log_flag else 0,
                 resampling_frequency_days=simulation.resampling_frequency_days,
                 resampling_frequency_weeks=simulation.resampling_frequency_weeks,
@@ -368,31 +339,81 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
 
             # Update simulation with results
             simulation.status = "completed"
-            #simulation.end_time = timezone.now()
             simulation.results_path = results_dir
             simulation.save()
 
-            return Response({
-                'message': 'Simulation completed successfully',
-                'simulation_id': simulation.id,
-                'num_missing_col3': num_missing_col3,
-                'results_path': simulation.results_path
-            }, status=status.HTTP_200_OK)
+        except SimulationRun.DoesNotExist:
+            # Handle case where simulation object doesn't exist
+            print(f"Simulation with id {simulation_id} not found")
+            return
 
         except Exception as e:
-            # Update simulation status to failed
-            simulation.status = "failed"
-            #simulation.end_time = timezone.now()
-            simulation.save()
+            error_message = str(e)
+            print(f"Error in simulation {simulation_id}: {error_message}")
 
-            return Response({
-                'message': f'Error running simulation: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
+            if simulation:
+                simulation.status = "failed"
+                simulation.error_message = error_message[:500]  # Truncate if too long
+                simulation.save()
+
+    @action(methods=['post'], detail=True)
+    def run_simulation(self, request, pk=None):
+        simulation = self.get_object()
+
+        # Check if simulation belongs to user
+        if simulation.user.id != request.user.id:
+            return Response({"detail": "You cannot run other users' simulations."},
+                            status=status.HTTP_403_FORBIDDEN)
+
+        # Check if simulation is already running
+        if simulation.status == "running":
+            # Double check if it's been running for too long (e.g., 24 hours)
+            # This helps recover from failed runs that didn't update status
+            time_threshold = timezone.now() - timezone.timedelta(minutes=5)
+            if simulation.updated_at < time_threshold:
+                simulation.status = "failed"
+                simulation.error_message = "Simulation timed out"
+                simulation.save()
+            else:
+                return Response({
+                    'message': 'Simulation is already running'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update simulation status to running
+        simulation.status = "running"
+        simulation.error_message = None  # Clear any previous error message
+        simulation.updated_at = timezone.now()
+        simulation.save()
+
+        # Start the simulation in a separate process
+        p = mp.Process(
+            target=SimulationRunViewSet.run_simulation_process,
+            args=(simulation.id,)
+        )
+        p.daemon = True  # Make process exit when main program exits
+        p.start()
+
+        return Response({
+            'message': 'Simulation submitted successfully',
+            'simulation_id': simulation.id
+        }, status=status.HTTP_200_OK)
 
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
         simulation = self.get_object()
-        return Response({
+        results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
+        response_data = {
             'status': simulation.status,
-            'results_path': simulation.results_path
-        })
+            'plot_path': f"{results_path}PSO_best_modelrun.png" if simulation.status == "completed" else None,
+            'dotty_plots': f"{results_path}dottyplots.png" if (
+                        simulation.status == "completed" and simulation.mode != "forward") else None,
+            'obj_function_path': f"{results_path}objectivefunctiontrace.png" if (simulation.status == "completed" and simulation.mode != "forward") else None,
+            'parameter_convergence': f"{results_path}{simulation.method}_calibration.csv" if simulation.status == "completed" else None,
+            'timeseries_path': f"{results_path}results.csv" if simulation.status == "completed" else None,
+        }
+
+        # Include error message if simulation failed
+        if simulation.status == "failed" and hasattr(simulation, 'error_message'):
+            response_data['error_message'] = simulation.error_message
+
+        return Response(response_data)

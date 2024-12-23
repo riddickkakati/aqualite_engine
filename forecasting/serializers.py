@@ -131,7 +131,7 @@ class SimulationRunSerializer(serializers.ModelSerializer):
             'resampling_frequency_days', 'resampling_frequency_weeks',
             'email_send', 'email_list',
             # Status and results
-            'status', 'start_time', 'end_time', 'results_path',
+            'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path',
             # Optional parameter sets
             'pso_params', 'latin_params', 'monte_params'
         )

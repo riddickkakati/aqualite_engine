@@ -31,13 +31,13 @@ class SimulationRunAdmin(admin.ModelAdmin):
         'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'n_data_interpolate',
         'validation_required', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
         'computeparameters', 'log_flag', 'resampling_frequency_days', 'resampling_frequency_weeks',
-        'email_send', 'email_list', 'status', 'results_path'
+        'email_send', 'email_list', 'error_message', 'status', 'results_path'
     )
 
     list_display = (
         'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'method',
         'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required',
-        'compiler', 'databaseformat', 'status', 'start_time', 'end_time'
+        'compiler', 'databaseformat', 'error_message', 'updated_at', 'status', 'start_time', 'end_time'
     )
 
 @admin.register(TimeSeriesData)
