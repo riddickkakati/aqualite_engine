@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from .models import (
-    Group, UserProfile, Member, Comment,
+    ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment,
     TimeSeriesData, ParameterFile, SimulationRun,
     PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter, ParameterRangesFile, UserValidationFile
 )
@@ -38,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Comment
+        model = ForecastingComment
         fields = ('user', 'group', 'description', 'time')
 
 
@@ -46,27 +46,27 @@ class MemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(many=False)
 
     class Meta:
-        model = Member
+        model = ForecastingMember
         fields = ('user', 'group', 'admin')
 
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Group
+        model = ForecastingGroup
         fields = ('id', 'name', 'location', 'description',)
 
 
 class GroupFullSerializer(serializers.ModelSerializer):
-    members = serializers.SerializerMethodField()
-    comments = serializers.SerializerMethodField()
+    forecasting_members = serializers.SerializerMethodField()
+    forecasting_comments = serializers.SerializerMethodField()
 
     class Meta:
-        model = Group
-        fields = ('id', 'name', 'time', 'location', 'description', 'members', 'comments')
+        model = ForecastingGroup
+        fields = ('id', 'name', 'time', 'location', 'description', 'forecasting_members', 'forecasting_comments')
 
     def get_comments(self, obj):
-        comments = Comment.objects.filter(group=obj).order_by('-time')
-        serializer = CommentSerializer(comments, many=True)
+        forecasting_comments = ForecastingComment.objects.filter(group=obj).order_by('-time')
+        serializer = CommentSerializer(forecasting_comments, many=True)
         return serializer.data
 
 
@@ -206,5 +206,5 @@ class GroupForecastSerializer(serializers.ModelSerializer):
     parameter_files = ParameterFileSerializer(many=True, read_only=True)
 
     class Meta:
-        model = Group
+        model = ForecastingGroup
         fields = ('id', 'name', 'location', 'description', 'simulations', 'timeseries', 'parameter_files')

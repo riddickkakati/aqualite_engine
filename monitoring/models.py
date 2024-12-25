@@ -1,6 +1,28 @@
 from django.db import models
 from django.contrib.auth.models import User
-from forecasting.models import Group
+
+class MonitoringGroup(models.Model):
+    name = models.CharField(max_length=32, null=False, unique=False)
+    location = models.CharField(max_length=32, null=False)
+    description = models.CharField(max_length=256, null=False, unique=False)
+    time = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('name', 'location'))
+
+class MonitoringMember(models.Model):
+    group = models.ForeignKey(MonitoringGroup, related_name='monitoring_members', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='monitoring_members_of', on_delete=models.CASCADE)
+    admin = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = (('user', 'group'),)
+
+class MonitoringComment(models.Model):
+    group = models.ForeignKey(MonitoringGroup, related_name='monitoring_comments', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='monitoring_user_comments', on_delete=models.CASCADE)
+    description = models.CharField(max_length=256, null=False, unique=False)
+    time = models.DateTimeField(auto_now_add=True)
 
 class MonitoringRun(models.Model):
 
@@ -15,7 +37,7 @@ class MonitoringRun(models.Model):
         ('D', 'DO')
     ]
 
-    group = models.ForeignKey(Group, related_name='monitoring_group', on_delete=models.CASCADE)
+    group = models.ForeignKey(MonitoringGroup, related_name='monitoring_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='monitoring_runs', on_delete=models.CASCADE)
     start_date = models.DateField(null=False, blank=False)
     end_date = models.DateField(null=False, blank=False)

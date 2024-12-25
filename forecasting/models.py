@@ -18,7 +18,7 @@ class UserProfile(models.Model):
     image = models.ImageField(upload_to=profile_pic_upload_path_handler, blank=True)
     bio = models.CharField(max_length=256, blank=True, null=True)
 
-class Group(models.Model):
+class ForecastingGroup(models.Model):
     name = models.CharField(max_length=32, null=False, unique=False)
     location = models.CharField(max_length=32, null=False)
     description = models.CharField(max_length=256, null=False, unique=False)
@@ -27,17 +27,17 @@ class Group(models.Model):
     class Meta:
         unique_together = (('name', 'location'))
 
-class Member(models.Model):
-    group = models.ForeignKey(Group, related_name='members', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='members_of', on_delete=models.CASCADE)
+class ForecastingMember(models.Model):
+    group = models.ForeignKey(ForecastingGroup, related_name='forecasting_members', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='forecasting_members_of', on_delete=models.CASCADE)
     admin = models.BooleanField(default=False)
 
     class Meta:
         unique_together = (('user', 'group'),)
 
-class Comment(models.Model):
-    group = models.ForeignKey(Group, related_name='comments', on_delete=models.CASCADE)
-    user = models.ForeignKey(User, related_name='user_comments', on_delete=models.CASCADE)
+class ForecastingComment(models.Model):
+    group = models.ForeignKey(ForecastingGroup, related_name='forecasting_comments', on_delete=models.CASCADE)
+    user = models.ForeignKey(User, related_name='forecasting_user_comments', on_delete=models.CASCADE)
     description = models.CharField(max_length=256, null=False, unique=False)
     time = models.DateTimeField(auto_now_add=True)
 
@@ -92,7 +92,7 @@ class SimulationRun(models.Model):
         ('R', 'RAM')
     ]
 
-    group = models.ForeignKey(Group, related_name='simulations', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='simulations', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='simulation_runs', on_delete=models.CASCADE)
 
     # Basic simulation parameters
@@ -130,7 +130,7 @@ class SimulationRun(models.Model):
 
 
 class TimeSeriesData(models.Model):
-    group = models.ForeignKey(Group, related_name='timeseries', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='timeseries', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='uploaded_timeseries', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to=timeseries_upload_path_handler,
@@ -141,7 +141,7 @@ class TimeSeriesData(models.Model):
 
 
 class ParameterFile(models.Model):
-    group = models.ForeignKey(Group, related_name='parameter_files_group', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='parameter_files_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='parameter_files_user', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to=parameters_upload_path_handler,
@@ -154,7 +154,7 @@ class ParameterFile(models.Model):
 
 
 class ParameterRangesFile(models.Model):
-    group = models.ForeignKey(Group, related_name='parameter_ranges_group', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='parameter_ranges_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='parameter_ranges_user', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to=parameter_ranges_upload_path_handler,
@@ -167,7 +167,7 @@ class ParameterRangesFile(models.Model):
 
 
 class UserValidationFile(models.Model):
-    group = models.ForeignKey(Group, related_name='user_validation_group', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='user_validation_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='user_validation_user', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to=user_validation_path_handler,
@@ -180,7 +180,7 @@ class UserValidationFile(models.Model):
 
 
 class ForwardParameter(models.Model):
-    group = models.ForeignKey(Group, related_name='parameter_values_group', on_delete=models.CASCADE)
+    group = models.ForeignKey(ForecastingGroup, related_name='parameter_values_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='parameter_values_user', on_delete=models.CASCADE)
     simulation = models.OneToOneField(
         SimulationRun,

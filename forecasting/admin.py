@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
+from .models import ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 
 
 @admin.register(UserProfile)
@@ -7,18 +7,18 @@ class UserProfileAdmin(admin.ModelAdmin):
     fields = ('user', 'image', 'is_premium', 'bio')
     list_display = ('id', 'user', 'image')
 
-@admin.register(Group)
+@admin.register(ForecastingGroup)
 class GroupAdmin(admin.ModelAdmin):
     fields = ('name', 'location', 'description')
     list_display = ('id','name', 'time', 'location', 'description')
 
 
-@admin.register(Member)
+@admin.register(ForecastingMember)
 class MemberAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'admin')
     list_display = ('user', 'group', 'admin')
 
-@admin.register(Comment)
+@admin.register(ForecastingComment)
 class CommentAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'description')
     list_display = ('user', 'group', 'description', 'time')

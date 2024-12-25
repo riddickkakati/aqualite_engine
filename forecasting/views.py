@@ -11,7 +11,7 @@ from django.utils import timezone
 import multiprocessing as mp
 from datetime import datetime
 from .models import (
-    Group, UserProfile, Member, Comment,
+    ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment,
     TimeSeriesData, ParameterFile, ForwardParameter, ParameterRangesFile, SimulationRun, UserValidationFile,
     PSOParameter, LatinParameter, MonteCarloParameter
 )
@@ -82,7 +82,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewset(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+    queryset = ForecastingComment.objects.all()
     serializer_class = CommentSerializer
 
 
@@ -92,7 +92,7 @@ class UserProfileViewset(viewsets.ModelViewSet):
 
 
 class GroupViewset(viewsets.ModelViewSet):
-    queryset = Group.objects.all()
+    queryset = ForecastingGroup.objects.all()
     serializer_class = GroupSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -107,17 +107,17 @@ class GroupViewset(viewsets.ModelViewSet):
 
 
 class MemberViewset(viewsets.ModelViewSet):
-    queryset = Member.objects.all()
+    queryset = ForecastingMember.objects.all()
     serializer_class = MemberSerializer
 
     @action(methods=['post'], detail=False)
     def join(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = Group.objects.get(id=request.data['group'])
+                group = ForecastingGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = Member.objects.create(group=group, user=user, admin=False)
+                member = ForecastingMember.objects.create(group=group, user=user, admin=False)
                 serializer = MemberSerializer(member, many=False)
                 response = {'message': 'Joined group', 'results': serializer.data}
                 return Response(response, status=status.HTTP_200_OK)
@@ -132,15 +132,15 @@ class MemberViewset(viewsets.ModelViewSet):
     def leave(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = Group.objects.get(id=request.data['group'])
+                group = ForecastingGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = Member.objects.get(group=group, user=user)
+                member = ForecastingMember.objects.get(group=group, user=user)
                 member.delete()
                 response = {'message': 'Left group'}
                 return Response(response, status=status.HTTP_200_OK)
             except:
-                response = {'message': 'Group, user or member not found'}
+                response = {'message': 'ForecastingGroup, user or member not found'}
                 return Response(response, status=status.HTTP_400_BAD_REQUEST)
         else:
             response = {'message': 'Wrong params'}

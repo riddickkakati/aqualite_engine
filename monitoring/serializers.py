@@ -1,8 +1,41 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
-from forecasting.serializers import UserSerializer, GroupSerializer
-from .models import MonitoringRun
+from forecasting.serializers import UserSerializer
+from .models import MonitoringRun, MonitoringGroup, MonitoringMember, MonitoringComment
+
+class CommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MonitoringComment
+        fields = ('user', 'group', 'description', 'time')
+
+
+class MemberSerializer(serializers.ModelSerializer):
+    user = UserSerializer(many=False)
+
+    class Meta:
+        model = MonitoringMember
+        fields = ('user', 'group', 'admin')
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MonitoringGroup
+        fields = ('id', 'name', 'location', 'description',)
+
+
+class GroupFullSerializer(serializers.ModelSerializer):
+    monitoring_members = serializers.SerializerMethodField()
+    monitoring_comments = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MonitoringGroup
+        fields = ('id', 'name', 'time', 'location', 'description', 'monitoring_members', 'monitoring_comments')
+
+    def get_comments(self, obj):
+        monitoring_comments = MonitoringComment.objects.filter(group=obj).order_by('-time')
+        serializer = CommentSerializer(monitoring_comments, many=True)
+        return serializer.data
 
 class MonitoringRunSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -11,4 +44,4 @@ class MonitoringRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonitoringRun
         fields = (
-            'id', 'user', 'group', 'start_date', 'end_date', 'longitude', 'latitude', 'satellite', 'parameter', 'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path',)
+            'id', 'user', 'group', 'start_date', 'end_date', 'longitude', 'latitude', 'satellite', 'parameter', 'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path')
