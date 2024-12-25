@@ -32,10 +32,14 @@ class GroupFullSerializer(serializers.ModelSerializer):
         model = MonitoringGroup
         fields = ('id', 'name', 'time', 'location', 'description', 'monitoring_members', 'monitoring_comments')
 
-    def get_comments(self, obj):
+    def get_monitoring_comments(self, obj):
         monitoring_comments = MonitoringComment.objects.filter(group=obj).order_by('-time')
         serializer = CommentSerializer(monitoring_comments, many=True)
         return serializer.data
+
+    def get_forecasting_members(self, obj):  # Changed name to match your field
+        monitoring_members = obj.monitoring_members.all()
+        return MemberSerializer(monitoring_members, many=True).data
 
 class MonitoringRunSerializer(serializers.ModelSerializer):
     user = UserSerializer()

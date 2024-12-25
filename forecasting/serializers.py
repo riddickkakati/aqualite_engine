@@ -64,10 +64,14 @@ class GroupFullSerializer(serializers.ModelSerializer):
         model = ForecastingGroup
         fields = ('id', 'name', 'time', 'location', 'description', 'forecasting_members', 'forecasting_comments')
 
-    def get_comments(self, obj):
+    def get_forecasting_comments(self, obj):
         forecasting_comments = ForecastingComment.objects.filter(group=obj).order_by('-time')
         serializer = CommentSerializer(forecasting_comments, many=True)
         return serializer.data
+
+    def get_forecasting_members(self, obj):  # Changed name to match your field
+        forecasting_members = obj.forecasting_members.all()
+        return MemberSerializer(forecasting_members, many=True).data
 
 
 # New serializers for forecasting functionality
