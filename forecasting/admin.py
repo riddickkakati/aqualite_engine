@@ -9,7 +9,7 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    fields = ('name', 'location', 'time', 'description')
+    fields = ('name', 'location', 'description')
     list_display = ('id','name', 'time', 'location', 'description')
 
 
