@@ -53,7 +53,7 @@ class MemberSerializer(serializers.ModelSerializer):
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
-        fields = ('id', 'name', 'location', 'description')
+        fields = ('id', 'name', 'location', 'description',)
 
 
 class GroupFullSerializer(serializers.ModelSerializer):
@@ -62,7 +62,7 @@ class GroupFullSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Group
-        fields = ('id', 'name', 'location', 'description', 'members', 'comments')
+        fields = ('id', 'name', 'time', 'location', 'description', 'members', 'comments')
 
     def get_comments(self, obj):
         comments = Comment.objects.filter(group=obj).order_by('-time')

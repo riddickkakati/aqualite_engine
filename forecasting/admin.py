@@ -1,4 +1,4 @@
-'''from django.contrib import admin
+from django.contrib import admin
 from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 
 
@@ -9,8 +9,8 @@ class UserProfileAdmin(admin.ModelAdmin):
 
 @admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
-    fields = ('name', 'location', 'description')
-    list_display = ('id','name', 'location', 'description')
+    fields = ('name', 'location', 'time', 'description')
+    list_display = ('id','name', 'time', 'location', 'description')
 
 
 @admin.register(Member)
@@ -27,7 +27,7 @@ class CommentAdmin(admin.ModelAdmin):
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-         'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
+         'user', 'group',
             # Basic simulation parameters
             'interpolate', 'n_data_interpolate', 'validation_required', 'core',
             'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
@@ -42,7 +42,7 @@ class SimulationRunAdmin(admin.ModelAdmin):
     )
 
     list_display = (
-        'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
+        'user', 'group',
             # Basic simulation parameters
             'interpolate', 'n_data_interpolate', 'validation_required', 'core',
             'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
@@ -86,6 +86,3 @@ class LatinParametersAdmin(admin.ModelAdmin):
 class MonteCarloParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','num_iterations',)
     list_display = ('simulation','num_iterations',)
-
-
-'''
