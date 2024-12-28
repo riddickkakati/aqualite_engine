@@ -47,7 +47,7 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ForecastingMember
-        fields = ('user', 'group', 'admin')
+        fields = ('user', 'group', 'admin', 'time')
 
 
 class GroupSerializer(serializers.ModelSerializer):

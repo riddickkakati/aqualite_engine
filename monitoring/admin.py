@@ -11,7 +11,7 @@ class GroupAdmin(admin.ModelAdmin):
 @admin.register(MonitoringMember)
 class MemberAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'admin')
-    list_display = ('user', 'group', 'admin')
+    list_display = ('user', 'group', 'admin', 'time')
 
 @admin.register(MonitoringComment)
 class CommentAdmin(admin.ModelAdmin):

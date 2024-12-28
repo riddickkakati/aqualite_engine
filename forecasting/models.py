@@ -31,6 +31,7 @@ class ForecastingMember(models.Model):
     group = models.ForeignKey(ForecastingGroup, related_name='forecasting_members', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='forecasting_members_of', on_delete=models.CASCADE)
     admin = models.BooleanField(default=False)
+    time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = (('user', 'group'),)

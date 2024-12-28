@@ -16,7 +16,7 @@ class GroupAdmin(admin.ModelAdmin):
 @admin.register(ForecastingMember)
 class MemberAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'admin')
-    list_display = ('user', 'group', 'admin')
+    list_display = ('user', 'group', 'admin', 'time')
 
 @admin.register(ForecastingComment)
 class CommentAdmin(admin.ModelAdmin):

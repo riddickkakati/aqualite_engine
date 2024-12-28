@@ -15,7 +15,7 @@ class MemberSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = MonitoringMember
-        fields = ('user', 'group', 'admin')
+        fields = ('user', 'group', 'admin', 'time')
 
 
 class GroupSerializer(serializers.ModelSerializer):

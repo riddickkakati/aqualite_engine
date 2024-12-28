@@ -14,6 +14,7 @@ class MonitoringMember(models.Model):
     group = models.ForeignKey(MonitoringGroup, related_name='monitoring_members', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='monitoring_members_of', on_delete=models.CASCADE)
     admin = models.BooleanField(default=False)
+    time = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         unique_together = (('user', 'group'),)
