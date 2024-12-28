@@ -117,7 +117,7 @@ class MemberViewset(viewsets.ModelViewSet):
                 group = ForecastingGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = ForecastingMember.objects.create(group=group, user=user, admin=False)
+                member = ForecastingMember.objects.create(group=group, user=user, admin=request.data.get('admin', False))
                 serializer = MemberSerializer(member, many=False)
                 response = {'message': 'Joined group', 'results': serializer.data}
                 return Response(response, status=status.HTTP_200_OK)
