@@ -2,9 +2,9 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 from .models import (
-    ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment,
+    Group, UserProfile, Member, Comment,
     TimeSeriesData, ParameterFile, SimulationRun,
-    PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter, ParameterRangesFile, UserValidationFile
+    PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
 )
 from django.db.models import Sum
 
@@ -38,7 +38,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ForecastingComment
+        model = Comment
         fields = ('user', 'group', 'description', 'time')
 
 
@@ -46,32 +46,28 @@ class MemberSerializer(serializers.ModelSerializer):
     user = UserSerializer(many=False)
 
     class Meta:
-        model = ForecastingMember
-        fields = ('user', 'group', 'admin', 'time')
+        model = Member
+        fields = ('user', 'group', 'admin')
 
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
-        model = ForecastingGroup
-        fields = ('id', 'name', 'location', 'description',)
+        model = Group
+        fields = ('id', 'name', 'location', 'description')
 
 
 class GroupFullSerializer(serializers.ModelSerializer):
-    forecasting_members = serializers.SerializerMethodField()
-    forecasting_comments = serializers.SerializerMethodField()
+    members = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
 
     class Meta:
-        model = ForecastingGroup
-        fields = ('id', 'name', 'time', 'location', 'description', 'forecasting_members', 'forecasting_comments')
+        model = Group
+        fields = ('id', 'name', 'location', 'description', 'members', 'comments')
 
-    def get_forecasting_comments(self, obj):
-        forecasting_comments = ForecastingComment.objects.filter(group=obj).order_by('-time')
-        serializer = CommentSerializer(forecasting_comments, many=True)
+    def get_comments(self, obj):
+        comments = Comment.objects.filter(group=obj).order_by('-time')
+        serializer = CommentSerializer(comments, many=True)
         return serializer.data
-
-    def get_forecasting_members(self, obj):  # Changed name to match your field
-        forecasting_members = obj.forecasting_members.all()
-        return MemberSerializer(forecasting_members, many=True).data
 
 
 # New serializers for forecasting functionality
@@ -85,23 +81,13 @@ class TimeSeriesDataSerializer(serializers.ModelSerializer):
 class ParameterFileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ParameterFile
-        fields = ('id', 'group', 'user', 'file', 'upload_date', 'description')
+        fields = ('group', 'user', 'file', 'upload_date', 'description')
         read_only_fields = ('upload_date',)
-
-class ParameterRangesFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ParameterRangesFile
-        fields = ('id', 'group', 'user', 'file', 'upload_date', 'description')
-
-class UserValidationFileSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserValidationFile
-        fields = ('id', 'group', 'user', 'file', 'upload_date', 'description')
 
 class ForwardParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForwardParameter
-        fields = ('id', 'group', 'user', 'parameter1', 'parameter2', 'parameter3',
+        fields = ('group', 'user', 'parameter1', 'parameter2', 'parameter3',
                     'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
 
 
@@ -129,8 +115,6 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     timeseries = TimeSeriesDataSerializer()
     parameters_file = ParameterFileSerializer(required=False)
     parameters_forward = ForwardParametersSerializer(required=False)
-    parameter_ranges = ParameterRangesFileSerializer(required=False)
-    user_validation = UserValidationFileSerializer(required=False)
     pso_params = PSOParametersSerializer(required=False)
     latin_params = LatinParametersSerializer(required=False)
     monte_params = MonteCarloParametersSerializer(required=False)
@@ -138,7 +122,7 @@ class SimulationRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = SimulationRun
         fields = (
-            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
+            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges_file', 'uservalidationpath',
             # Basic simulation parameters
             'interpolate', 'n_data_interpolate', 'validation_required', 'core',
             'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
@@ -153,30 +137,13 @@ class SimulationRunSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
 
-    def create(self, validated_data):
-        timeseries_data = validated_data.pop('timeseries')
-        timeseries = TimeSeriesData.objects.get(id=timeseries_data.get('id'))
-        simulation = SimulationRun.objects.create(timeseries=timeseries, **validated_data)
-        return simulation
-
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
-        if instance.computeparameterranges == True:
-            representation.pop('parameter_ranges', None)
-
-        if instance.model == 'W':
-            representation.pop('CFL', None)
-
-        if instance.validation_required == False:
-            representation.pop('user_validation', None)
-
         if instance.mode == 'F':
-            representation.pop('parameter_ranges', None)
             representation.pop('pso_params', None)
             representation.pop('latin_params', None)
             representation.pop('monte_params', None)
-            representation.pop('depth', None)
 
             if instance.forward_options == 'U':
                 representation.pop('parameters_forward', None)
@@ -216,5 +183,5 @@ class GroupForecastSerializer(serializers.ModelSerializer):
     parameter_files = ParameterFileSerializer(many=True, read_only=True)
 
     class Meta:
-        model = ForecastingGroup
+        model = Group
         fields = ('id', 'name', 'location', 'description', 'simulations', 'timeseries', 'parameter_files')

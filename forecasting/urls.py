@@ -12,12 +12,6 @@ router.register("profile", views.UserProfileViewset)
 
 # New forecasting routes
 router.register("timeseries", views.TimeSeriesDataViewSet)
-router.register("parameterforward", views.ParameterForwardViewSet)
-router.register("parameterranges", views.ParameterRangesViewSet)
-router.register("uservalidation", views.UserValidationViewSet)
-router.register("psoparameter", views.PSOParametersViewSet)
-router.register("latinparameter", views.LatinParameterViewSet)
-router.register("montecarloparameter", views.MonteCarloParameterViewSet)
 router.register("parameters", views.ParameterFileViewSet)
 router.register("simulations", views.SimulationRunViewSet)
 

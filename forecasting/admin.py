@@ -1,31 +1,33 @@
 from django.contrib import admin
-from .models import ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter, ParameterRangesFile, UserValidationFile
+from .models import Group, UserProfile, Member, Comment, SimulationRun, TimeSeriesData, ParameterFile, PSOParameter, LatinParameter, MonteCarloParameter, ForwardParameter
+
 
 @admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
     fields = ('user', 'image', 'is_premium', 'bio')
     list_display = ('id', 'user', 'image')
 
-@admin.register(ForecastingGroup)
+@admin.register(Group)
 class GroupAdmin(admin.ModelAdmin):
     fields = ('name', 'location', 'description')
-    list_display = ('id','name', 'time', 'location', 'description')
+    list_display = ('id','name', 'location', 'description')
 
 
-@admin.register(ForecastingMember)
+@admin.register(Member)
 class MemberAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'admin')
-    list_display = ('user', 'group', 'admin', 'time')
+    list_display = ('user', 'group', 'admin')
 
-@admin.register(ForecastingComment)
+@admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
     fields = ('user', 'group', 'description')
     list_display = ('user', 'group', 'description', 'time')
 
+
 @admin.register(SimulationRun)
 class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
-        'group', 'user', 'parameter_ranges_file', 'user_validation_file', 'model', 'mode', 'method',
+        'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges_file', 'uservalidationpath', 'model', 'mode', 'method',
         'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'n_data_interpolate',
         'validation_required', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
         'computeparameters', 'log_flag', 'resampling_frequency_days', 'resampling_frequency_weeks',
@@ -35,7 +37,7 @@ class SimulationRunAdmin(admin.ModelAdmin):
     list_display = (
         'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'method',
         'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required',
-        'compiler', 'databaseformat', 'status', 'start_time', 'end_time'
+        'compiler', 'databaseformat', 'error_message', 'updated_at', 'status', 'start_time', 'end_time'
     )
 
 @admin.register(TimeSeriesData)
@@ -68,13 +70,3 @@ class LatinParametersAdmin(admin.ModelAdmin):
 class MonteCarloParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','num_iterations',)
     list_display = ('simulation','num_iterations',)
-
-@admin.register(ParameterRangesFile)
-class ParameterRangesFileAdmin(admin.ModelAdmin):
-    fields = ('group', 'user', 'file', 'description')
-    list_display = ('id', 'group', 'user', 'file', 'upload_date', 'description')
-
-@admin.register(UserValidationFile)
-class UserValidationFileAdmin(admin.ModelAdmin):
-    fields = ('group', 'user', 'file', 'description')
-    list_display = ('id', 'group', 'user', 'file', 'upload_date', 'description')
