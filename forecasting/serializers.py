@@ -124,83 +124,24 @@ class MonteCarloParametersSerializer(serializers.ModelSerializer):
 
 
 class SimulationRunSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    group = GroupSerializer()
-    timeseries = TimeSeriesDataSerializer()
-    parameters_file = ParameterFileSerializer(required=False)
-    parameters_forward = ForwardParametersSerializer(required=False)
-    parameter_ranges = ParameterRangesFileSerializer(required=False)
-    user_validation = UserValidationFileSerializer(required=False)
-    pso_params = PSOParametersSerializer(required=False)
-    latin_params = LatinParametersSerializer(required=False)
-    monte_params = MonteCarloParametersSerializer(required=False)
-
     class Meta:
         model = SimulationRun
         fields = (
-            'id', 'user', 'group', 'timeseries', 'parameters_file', 'parameters_forward', 'parameter_ranges', 'user_validation',
-            # Basic simulation parameters
-            'interpolate', 'n_data_interpolate', 'validation_required', 'core',
-            'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
-            'computeparameters', 'model', 'mode', 'method', 'optimizer',
-            'forward_options', 'error_metric', 'solver', 'log_flag',
-            'resampling_frequency_days', 'resampling_frequency_weeks',
-            'email_send', 'email_list',
-            # Status and results
-            'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path',
-            # Optional parameter sets
-            'pso_params', 'latin_params', 'monte_params'
+            'id', 'group', 'timeseries',
+            'model', 'mode', 'method', 'optimizer',
+            'error_metric', 'solver', 'interpolate',
+            'n_data_interpolate', 'validation_required',
+            'core', 'depth', 'compiler', 'databaseformat',
+            'computeparameterranges', 'computeparameters',
+            'log_flag', 'resampling_frequency_days',
+            'resampling_frequency_weeks', 'email_send',
+            'email_list'
         )
-        read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-
-        if instance.computeparameterranges == True:
-            representation.pop('parameter_ranges', None)
-
-        if instance.model == 'W':
-            representation.pop('CFL', None)
-
-        if instance.validation_required == False:
-            representation.pop('user_validation', None)
-
-        if instance.mode == 'F':
-            representation.pop('parameter_ranges', None)
-            representation.pop('pso_params', None)
-            representation.pop('latin_params', None)
-            representation.pop('monte_params', None)
-            representation.pop('depth', None)
-
-            if instance.forward_options == 'U':
-                representation.pop('parameters_forward', None)
-
-            elif instance.forward_options == 'W':
-                representation.pop('parameters_file', None)
-
-        elif instance.mode == 'C':
-            if instance.optimizer == 'P':
-                representation.pop('latin_params', None)
-                representation.pop('monte_params', None)
-                representation.pop('parameters_forward', None)
-                representation.pop('parameters_file', None)
-                representation.pop('forward_options', None)
-
-            elif instance.optimizer == 'L':
-                representation.pop('pso_params', None)
-                representation.pop('monte_params', None)
-                representation.pop('parameters_forward', None)
-                representation.pop('parameters_file', None)
-                representation.pop('forward_options', None)
-
-            elif instance.optimizer == 'M':
-                representation.pop('pso_params', None)
-                representation.pop('latin_params', None)
-                representation.pop('parameters_forward', None)
-                representation.pop('parameters_file', None)
-                representation.pop('forward_options', None)
-
-        return representation
+    def create(self, validated_data):
+        # Ensure we use the authenticated user
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
 
 
 

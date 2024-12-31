@@ -378,11 +378,38 @@ class UserValidationViewSet(viewsets.ModelViewSet):
         # Proceed to delete the instance
         return super().destroy(request, *args, **kwargs)
 
+
 class SimulationRunViewSet(viewsets.ModelViewSet):
     queryset = SimulationRun.objects.all()
     serializer_class = SimulationRunSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
+
+    def create(self, request, *args, **kwargs):
+        # Modify the incoming data
+        data = request.data.copy()
+
+        # Handle user data - could be either an object or ID
+        user_data = request.data.get('user')
+        if isinstance(user_data, dict):
+            data['user'] = user_data['id']
+
+        # Handle group data - could be either an object or ID
+        group_data = request.data.get('group')
+        if isinstance(group_data, dict):
+            data['group'] = group_data['id']
+
+        # Handle timeseries data - could be either an object or ID
+        timeseries_data = request.data.get('timeseries')
+        if isinstance(timeseries_data, dict):
+            data['timeseries'] = timeseries_data['id']
+
+        # Create serializer with modified data
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -561,7 +588,8 @@ class PSOParametersViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # Remove the user=self.request.user part
+        serializer.save()  # Just save without adding user
 
     def get_queryset(self):
         # Ensure `get_queryset` always returns a valid queryset
