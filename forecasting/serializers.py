@@ -153,6 +153,12 @@ class SimulationRunSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('start_time', 'end_time', 'status', 'results_path')
 
+    def create(self, validated_data):
+        timeseries_data = validated_data.pop('timeseries')
+        timeseries = TimeSeriesData.objects.get(id=timeseries_data.get('id'))
+        simulation = SimulationRun.objects.create(timeseries=timeseries, **validated_data)
+        return simulation
+
     def to_representation(self, instance):
         representation = super().to_representation(instance)
 
