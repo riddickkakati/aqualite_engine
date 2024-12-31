@@ -11,15 +11,15 @@ from django.utils import timezone
 import multiprocessing as mp
 from datetime import datetime
 from .models import (
-    Group, UserProfile, Member, Comment,
-    TimeSeriesData, ParameterFile, SimulationRun,
+    ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment,
+    TimeSeriesData, ParameterFile, ForwardParameter, ParameterRangesFile, SimulationRun, UserValidationFile,
     PSOParameter, LatinParameter, MonteCarloParameter
 )
 from .serializers import (
-    GroupSerializer, GroupFullSerializer, GroupForecastSerializer,
+    GroupSerializer, GroupFullSerializer, GroupForecastSerializer, ForwardParametersSerializer, ParameterRangesFileSerializer, UserValidationFileSerializer,
     UserSerializer, UserProfileSerializer, ChangePasswordSerializer,
     MemberSerializer, CommentSerializer, TimeSeriesDataSerializer,
-    ParameterFileSerializer, SimulationRunSerializer
+    ParameterFileSerializer, SimulationRunSerializer, PSOParametersSerializer, LatinParametersSerializer, MonteCarloParametersSerializer
 )
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -82,7 +82,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewset(viewsets.ModelViewSet):
-    queryset = Comment.objects.all()
+    queryset = ForecastingComment.objects.all()
     serializer_class = CommentSerializer
 
 
@@ -92,7 +92,7 @@ class UserProfileViewset(viewsets.ModelViewSet):
 
 
 class GroupViewset(viewsets.ModelViewSet):
-    queryset = Group.objects.all()
+    queryset = ForecastingGroup.objects.all()
     serializer_class = GroupSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -107,17 +107,17 @@ class GroupViewset(viewsets.ModelViewSet):
 
 
 class MemberViewset(viewsets.ModelViewSet):
-    queryset = Member.objects.all()
+    queryset = ForecastingMember.objects.all()
     serializer_class = MemberSerializer
 
     @action(methods=['post'], detail=False)
     def join(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = Group.objects.get(id=request.data['group'])
+                group = ForecastingGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = Member.objects.create(group=group, user=user, admin=False)
+                member = ForecastingMember.objects.create(group=group, user=user, admin=request.data.get('admin', False))
                 serializer = MemberSerializer(member, many=False)
                 response = {'message': 'Joined group', 'results': serializer.data}
                 return Response(response, status=status.HTTP_200_OK)
@@ -132,15 +132,15 @@ class MemberViewset(viewsets.ModelViewSet):
     def leave(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = Group.objects.get(id=request.data['group'])
+                group = ForecastingGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = Member.objects.get(group=group, user=user)
+                member = ForecastingMember.objects.get(group=group, user=user)
                 member.delete()
                 response = {'message': 'Left group'}
                 return Response(response, status=status.HTTP_200_OK)
             except:
-                response = {'message': 'Group, user or member not found'}
+                response = {'message': 'ForecastingGroup, user or member not found'}
                 return Response(response, status=status.HTTP_400_BAD_REQUEST)
         else:
             response = {'message': 'Wrong params'}
@@ -215,8 +215,8 @@ class ParameterFileViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         # Ensure `get_queryset` always returns a valid queryset
         if self.action in ['list', 'retrieve']:
-            return TimeSeriesData.objects.filter(user=self.request.user.id)
-        return TimeSeriesData.objects.all()
+            return ParameterFile.objects.filter(user=self.request.user.id)
+        return ParameterFile.objects.all()
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -246,6 +246,137 @@ class ParameterFileViewSet(viewsets.ModelViewSet):
         # Proceed to delete the instance
         return super().destroy(request, *args, **kwargs)
 
+class ParameterForwardViewSet(viewsets.ModelViewSet):
+    queryset = ForwardParameter.objects.all()
+    serializer_class = ForwardParametersSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return ForwardParameter.objects.filter(user=self.request.user.id)
+        return ForwardParameter.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
+
+class ParameterRangesViewSet(viewsets.ModelViewSet):
+    queryset = ParameterRangesFile.objects.all()
+    serializer_class = ParameterRangesFileSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return ParameterRangesFile.objects.filter(user=self.request.user.id)
+        return ParameterRangesFile.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
+
+class UserValidationViewSet(viewsets.ModelViewSet):
+    queryset = UserValidationFile.objects.all()
+    serializer_class = UserValidationFileSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return UserValidationFile.objects.filter(user=self.request.user.id)
+        return UserValidationFile.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
 
 class SimulationRunViewSet(viewsets.ModelViewSet):
     queryset = SimulationRun.objects.all()
@@ -401,6 +532,10 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
     @action(methods=['get'], detail=True)
     def check_status(self, request, pk=None):
         simulation = self.get_object()
+
+        if simulation.user.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
         results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
         response_data = {
             'status': simulation.status,
@@ -417,3 +552,135 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             response_data['error_message'] = simulation.error_message
 
         return Response(response_data)
+
+class PSOParametersViewSet(viewsets.ModelViewSet):
+    queryset = PSOParameter.objects.all()
+    serializer_class = PSOParametersSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return PSOParameter.objects.filter(user=self.request.user.id)
+        return PSOParameter.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
+
+class LatinParameterViewSet(viewsets.ModelViewSet):
+    queryset = LatinParameter.objects.all()
+    serializer_class = LatinParametersSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return LatinParameter.objects.filter(user=self.request.user.id)
+        return LatinParameter.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
+
+class MonteCarloParameterViewSet(viewsets.ModelViewSet):
+    queryset = MonteCarloParameter.objects.all()
+    serializer_class = MonteCarloParametersSerializer
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser, FormParser)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def get_queryset(self):
+        # Ensure `get_queryset` always returns a valid queryset
+        if self.action in ['list', 'retrieve']:
+            return MonteCarloParameter.objects.filter(user=self.request.user.id)
+        return MonteCarloParameter.objects.all()
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        # Restrict partial updates to the current user only
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot update other users' data."}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        # Retrieve the object to be deleted
+        instance = self.get_object()
+
+        # Check if the instance belongs to the authenticated user
+        if instance.id != request.user.id:
+            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+
+        # Proceed to delete the instance
+        return super().destroy(request, *args, **kwargs)
