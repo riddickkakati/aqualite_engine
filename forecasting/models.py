@@ -126,14 +126,14 @@ class SimulationRun(models.Model):
     ERROR_METRIC_CHOICES = [
         ('R', 'RMSE'),
         ('K', 'KGE'),
-        ('N', 'NSE')
+        ('N', 'NS')
     ]
 
     SOLVER_CHOICES = [
-        ('E', 'Euler'),
-        ('T', 'RK2'),
-        ('F', 'RK4'),
-        ('C', 'CrankNicolson')
+        ('E', 'euler'),
+        ('T', 'rk2'),
+        ('F', 'rk4'),
+        ('C', 'cranknicolson')
     ]
 
     FORWARD_CHOICES = [

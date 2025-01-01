@@ -176,7 +176,7 @@ def simulation_air2stream(self, x):
     else:  # The first year of simulation data is ignored (warm-up)
         return sim[366:]
 
-def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse, error_metric,user_id,group_id):
+def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse, error_metric,user_id,group_id,sim_id):
     owd = settings.MEDIA_ROOT
 
     column_order = list(df.columns)
@@ -213,7 +213,7 @@ def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse
                   loc='lower center', ncol=4, frameon=False)
     plt.subplots_adjust(hspace=0.3, wspace=0.4, bottom=0.1)
 
-    plt.savefig(f"{owd}/results/{user_id}_{group_id}/dottyplots.png", dpi=100)
+    plt.savefig(f"{owd}/results/{user_id}_{group_id}/dottyplots_{sim_id}.png", dpi=100)
     plt.close()  # Close the plot to avoid displaying it
 
     return
@@ -257,7 +257,7 @@ class Air2water_OOP:
                  air2streamusercalibrationpath=None,
                  uservalidationpath=None,
                  log_flag = 1, results_file_name = "results.db", resampling_frequency_days = 1,
-                 resampling_frequency_weeks = 1, email_send=0, email_list=['riddick.kakati@unitn.it']):
+                 resampling_frequency_weeks = 1, email_send=0, sim_id=0, email_list=['riddick.kakati@unitn.it']):
 
         self.user_id = user_id
         self.group_id = group_id
@@ -298,6 +298,7 @@ class Air2water_OOP:
         self.resampling_frequency_days = resampling_frequency_days
         self.resampling_frequency_weeks = resampling_frequency_weeks
         self.email_send = email_send
+        self.sim_id = sim_id
         self.email_list = email_list
 
     def run(self):
@@ -840,9 +841,9 @@ class Air2water_OOP:
             fig = plt.figure(1, figsize=(9, 6))
             plt.plot(results["like1"])
             #plt.show()
-            plt.ylabel("RMSE")
+            plt.ylabel(str(self.error))
             plt.xlabel("Iteration")
-            fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/objectivefunctiontrace.png", dpi=100)
+            fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/objectivefunctiontrace_{self.sim_id}.png", dpi=100)
         else:
             best_position = parameters
             # Plot the best model run
@@ -1010,7 +1011,7 @@ class Air2water_OOP:
         plt.xlabel("Year")
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
-        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun.png", dpi=100)
+        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun_{self.sim_id}.png", dpi=100)
         self.results_time_series = BytesIO()
         fig.savefig(self.results_time_series, format="png", dpi=100)
         self.results_time_series.seek(0)
@@ -1022,7 +1023,7 @@ class Air2water_OOP:
         if self.mode != "forward":
             parameters_low=[self.spot_setup.parameters[i].minbound for i in range(len(parameters))]
             parameters_high=[self.spot_setup.parameters[i].maxbound for i in range(len(parameters))]
-            self.Dottyplots= dottyplots(df3,theoretical_parameters,parameters_low,parameters_high,one_day_rmse,self.error,self.user_id,self.group_id)
+            self.Dottyplots= dottyplots(df3,theoretical_parameters,parameters_low,parameters_high,one_day_rmse,self.error,self.user_id,self.group_id,self.sim_id)
         else:
             self.Dottyplots=None
 

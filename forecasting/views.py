@@ -454,6 +454,21 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             os.makedirs(results_dir, exist_ok=True)
 
             # Initialize model with correct parameters
+
+            swarm_size = simulation.pso_params.swarm_size if hasattr(simulation,
+                                                                     'pso_params') and simulation.pso_params else None
+            phi1 = simulation.pso_params.phi1 if hasattr(simulation, 'pso_params') and simulation.pso_params else None
+            phi2 = simulation.pso_params.phi2 if hasattr(simulation, 'pso_params') and simulation.pso_params else None
+            omega = simulation.pso_params.omega if hasattr(simulation, 'pso_params') and simulation.pso_params else None
+            max_iterations = simulation.pso_params.max_iterations if hasattr(simulation,
+                                                                             'pso_params') and simulation.pso_params else None
+            if hasattr(simulation, 'latin_params') and simulation.latin_params:
+                numbersim = simulation.latin_params.num_samples
+            elif hasattr(simulation, 'monte_params') and simulation.monte_params:
+                numbersim = simulation.monte_params.num_iterations
+            else:
+                numbersim = None
+
             model = Air2water_OOP(
                 user_id=simulation.user.id,
                 group_id=simulation.group.id,
@@ -463,21 +478,22 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 model="air2water" if simulation.model == "W" else "air2stream",
                 core=simulation.core,
                 depth=simulation.depth,
-                db_file=f"{results_dir}/{simulation.method}_calibration.db",
-                results_file_name=f"{results_dir}/results.db",
-                swarmsize=simulation.pso_params.swarm_size,
-                phi1=simulation.pso_params.phi1,
-                phi2=simulation.pso_params.phi2,
-                maxiter=simulation.pso_params.max_iterations,
-                omega=simulation.pso_params.omega,
+                db_file=f"{results_dir}/{simulation.method}_calibration_{simulation.id}.db",
+                results_file_name=f"{results_dir}/results_{simulation_id}.db",
+                swarmsize=swarm_size,
+                phi1=phi1,
+                phi2=phi2,
+                omega=omega,
+                maxiter=max_iterations,
+                numbersim=numbersim,
                 method="SpotPY" if simulation.method == "S" else "PYCUP",
                 mode="calibration" if simulation.mode == "C" else "forward",
-                error="RMSE" if simulation.error_metric == "R" else "KGE",
-                optimizer="PSO" if simulation.optimizer == "P" else "SCE-UA",
-                solver="cranknicolson" if simulation.solver == "C" else "explicit",
+                error="RMSE" if simulation.error_metric == "R" else "KGE" if simulation.error_metric == "K" else "NS",
+                optimizer="PSO" if simulation.optimizer == "P" else "LHS" if simulation.optimizer == "L" else "MC",
+                solver="cranknicolson" if simulation.solver == "C" else "rk2" if simulation.solver == "T" else "rk4" if simulation.solver == "F" else "euler",
                 compiler="fortran" if simulation.compiler == "F" else "C",
                 CFL=simulation.CFL,
-                databaseformat="custom" if simulation.databaseformat == "C" else "standard",
+                databaseformat="custom" if simulation.databaseformat == "C" else "ram",
                 computeparametersranges="Yes" if simulation.computeparameterranges else "No",
                 computeparameters="Yes" if simulation.computeparameters else "No",
                 parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file else None,
@@ -489,6 +505,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 resampling_frequency_days=simulation.resampling_frequency_days,
                 resampling_frequency_weeks=simulation.resampling_frequency_weeks,
                 email_send=1 if simulation.email_send else 0,
+                sim_id=simulation.id,
                 email_list=simulation.email_list.split(',') if simulation.email_list else []
             )
 
@@ -566,12 +583,12 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
         results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
         response_data = {
             'status': simulation.status,
-            'plot_path': f"{results_path}PSO_best_modelrun.png" if simulation.status == "completed" else None,
-            'dotty_plots': f"{results_path}dottyplots.png" if (
+            'plot_path': f"{results_path}PSO_best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
+            'dotty_plots': f"{results_path}dottyplots_{simulation.id}.png" if (
                         simulation.status == "completed" and simulation.mode != "forward") else None,
-            'obj_function_path': f"{results_path}objectivefunctiontrace.png" if (simulation.status == "completed" and simulation.mode != "forward") else None,
-            'parameter_convergence': f"{results_path}{simulation.method}_calibration.csv" if simulation.status == "completed" else None,
-            'timeseries_path': f"{results_path}results.csv" if simulation.status == "completed" else None,
+            'obj_function_path': f"{results_path}objectivefunctiontrace_{simulation.id}.png" if (simulation.status == "completed" and simulation.mode != "forward") else None,
+            'parameter_convergence': f"{results_path}{simulation.method}_calibration_{simulation.id}.csv" if simulation.status == "completed" else None,
+            'timeseries_path': f"{results_path}results_{simulation.id}.csv" if simulation.status == "completed" else None,
         }
 
         # Include error message if simulation failed
@@ -633,7 +650,7 @@ class LatinParameterViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
     def get_queryset(self):
         # Ensure `get_queryset` always returns a valid queryset
@@ -677,7 +694,7 @@ class MonteCarloParameterViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save()
 
     def get_queryset(self):
         # Ensure `get_queryset` always returns a valid queryset
