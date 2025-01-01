@@ -356,15 +356,16 @@ class Air2water_OOP:
         #             if fnmatch.fnmatch(file, 'parameters*air2stream.yaml'):
         #                 self.parameter_ranges = file
 
-        try:
-            filename = glob.glob(f"{owd}/parameters/{self.user_id}_{self.group_id}/parameters_depth=*m.yaml")[0]
-            with open(filename, 'r') as file:
-                all_parameters1 = yaml.safe_load(file)
-        except IndexError:
-            raise FileNotFoundError("No parameters.yml file found in the directory")
+
         #all_parameters1 = read_yaml(datafolder + os.sep + str(f'{self.model}_{self.mode}_parameters.yml'))
 
         if self.mode != "forward":
+            try:
+                filename = glob.glob(f"{owd}/parameters/{self.user_id}_{self.group_id}/parameters_depth=*m.yaml")[0]
+                with open(filename, 'r') as file:
+                    all_parameters1 = yaml.safe_load(file)
+            except IndexError:
+                raise FileNotFoundError("No parameters.yml file found in the directory")
             all_parameters = all_parameters1['Optimizer']['parameters']
 
             all_parameters_names = list(all_parameters.keys())
@@ -489,6 +490,12 @@ class Air2water_OOP:
                     {}).get('high'))
 
         else:
+            try:
+                filename = glob.glob(f"{owd}/parameters/{self.user_id}_{self.group_id}/parameters_forward.yaml")[0]
+                with open(filename, 'r') as file:
+                    all_parameters1 = yaml.safe_load(file)
+            except IndexError:
+                raise FileNotFoundError("No parameters.yml file found in the directory")
             all_parameters = all_parameters1['Optimized']['parameters']
             a1 = all_parameters.get('a1')
             a2 = all_parameters.get('a2')
@@ -1011,7 +1018,7 @@ class Air2water_OOP:
         plt.xlabel("Year")
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
-        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/{self.optimizer}_best_modelrun_{self.sim_id}.png", dpi=100)
+        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/best_modelrun_{self.sim_id}.png", dpi=100)
         self.results_time_series = BytesIO()
         fig.savefig(self.results_time_series, format="png", dpi=100)
         self.results_time_series.seek(0)

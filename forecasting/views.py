@@ -496,10 +496,10 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 databaseformat="custom" if simulation.databaseformat == "C" else "ram",
                 computeparametersranges="Yes" if simulation.computeparameterranges else "No",
                 computeparameters="Yes" if simulation.computeparameters else "No",
-                forward_parameters= simulation.parameters_file.file.path if simulation.parameters_file.file.path else None,
-                parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file.file.path else None,
-                air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries.file.path else None,
-                air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries.file.path else None,
+                forward_parameters= simulation.parameters_file.file.path if simulation.parameters_file else None,
+                parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file else None,
+                air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
+                air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
                 uservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
                 log_flag=1 if simulation.log_flag else 0,
                 resampling_frequency_days=simulation.resampling_frequency_days,
@@ -583,7 +583,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
         results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
         response_data = {
             'status': simulation.status,
-            'plot_path': f"{results_path}PSO_best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
+            'plot_path': f"{results_path}best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
             'dotty_plots': f"{results_path}dottyplots_{simulation.id}.png" if (
                         simulation.status == "completed" and simulation.mode != "forward") else None,
             'obj_function_path': f"{results_path}objectivefunctiontrace_{simulation.id}.png" if (simulation.status == "completed" and simulation.mode != "forward") else None,

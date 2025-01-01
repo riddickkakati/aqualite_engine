@@ -5,7 +5,7 @@ from django.core.validators import FileExtensionValidator
 def profile_pic_upload_path_handler(instance, filename):
     return "avatars/{user_id}_{group_id}/profile_pic.jpg".format(id=instance.user.id)
 def parameters_upload_path_handler(instance, filename):
-    return "parameters/{user_id}_{group_id}/parameters.txt".format(user_id=instance.user.id, group_id=instance.group.id)
+    return "parameters/{user_id}_{group_id}/parameters_forward.yaml".format(user_id=instance.user.id, group_id=instance.group.id)
 def timeseries_upload_path_handler(instance, filename):
     return "timeseries/{user_id}_{group_id}/timeseries.txt".format(user_id=instance.user.id, group_id=instance.group.id)
 def parameter_ranges_upload_path_handler(instance, filename):
@@ -57,7 +57,7 @@ class ParameterFile(models.Model):
     user = models.ForeignKey(User, related_name='parameter_files_user', on_delete=models.CASCADE)
     file = models.FileField(
         upload_to=parameters_upload_path_handler,
-        validators=[FileExtensionValidator(allowed_extensions=['txt'])],
+        validators=[FileExtensionValidator(allowed_extensions=['yaml'])],
         blank=True,
         null=True
     )
