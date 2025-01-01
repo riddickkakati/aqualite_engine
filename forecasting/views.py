@@ -459,7 +459,9 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                                                                      'pso_params') and simulation.pso_params else None
             phi1 = simulation.pso_params.phi1 if hasattr(simulation, 'pso_params') and simulation.pso_params else None
             phi2 = simulation.pso_params.phi2 if hasattr(simulation, 'pso_params') and simulation.pso_params else None
-            omega = simulation.pso_params.omega if hasattr(simulation, 'pso_params') and simulation.pso_params else None
+            omega1 = simulation.pso_params.omega1 if hasattr(simulation, 'pso_params') and simulation.pso_params else None
+            omega2 = simulation.pso_params.omega2 if hasattr(simulation,
+                                                             'pso_params') and simulation.pso_params else None
             max_iterations = simulation.pso_params.max_iterations if hasattr(simulation,
                                                                              'pso_params') and simulation.pso_params else None
             if hasattr(simulation, 'latin_params') and simulation.latin_params:
@@ -478,12 +480,13 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 model="air2water" if simulation.model == "W" else "air2stream",
                 core=simulation.core,
                 depth=simulation.depth,
-                db_file=f"{results_dir}/{simulation.method}_calibration_{simulation.id}.db",
-                results_file_name=f"{results_dir}/results_{simulation_id}.db",
+                db_file=f"{results_dir}{simulation.method}_calibration_{simulation.id}.db",
+                results_file_name=f"{results_dir}results_{simulation_id}.db",
                 swarmsize=swarm_size,
                 phi1=phi1,
                 phi2=phi2,
-                omega=omega,
+                omega1=omega1,
+                omega2=omega2,
                 maxiter=max_iterations,
                 numbersim=numbersim,
                 method="SpotPY" if simulation.method == "S" else "PYCUP",
@@ -500,7 +503,8 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                 parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file else None,
                 air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
                 air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
-                uservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
+                air2wateruservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
+                #air2streamuservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
                 log_flag=1 if simulation.log_flag else 0,
                 resampling_frequency_days=simulation.resampling_frequency_days,
                 resampling_frequency_weeks=simulation.resampling_frequency_weeks,
@@ -516,6 +520,11 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             simulation.status = "completed"
             simulation.results_path = results_dir
             simulation.save()
+
+            if num_missing_col3 == None:
+                simulation.status = "failed"
+                simulation.error_message = str("Validation file or flags not found for \"Validation Required\"= False. Either put \"Validation Required\"=True, or add flag, or add validation file.")
+                simulation.save()
 
         except SimulationRun.DoesNotExist:
             # Handle case where simulation object doesn't exist

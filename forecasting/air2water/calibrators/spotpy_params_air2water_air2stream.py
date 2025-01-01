@@ -8,10 +8,9 @@ import numpy.ma as ma
 from django.conf import settings
 
 
-
 class spot_setup(object):
 
-    def __init__(self,parameters, db_file, df, tt, model, metric="RMSE", optimizer="ABC",threshold=1000,version=8,solver="cranknicolson",compiler="fortran",CFL=0.9,mode2="calibration"):
+    def __init__(self,parameters, db_file, df, tt, model, version, metric="RMSE", optimizer="ABC",threshold=1000,solver="cranknicolson",compiler="fortran",CFL=0.9,mode2="calibration",interpolate=True,missing_data=0, interpolate_use_rmse=True):
         # Load Observation data from file
         self.Tw_solution, self.Ta_data, self.Q, self.Y, self.M, self.D = [], [], [], [], [], []
         # Find Path to Hymod on users system
@@ -23,6 +22,9 @@ class spot_setup(object):
         self.threshold = threshold
         self.db_file = db_file
         self.tt = tt
+        self.interpolate=interpolate
+        self.missing_data=missing_data
+        self.interpolate_use_rmse=interpolate_use_rmse
         if os.path.exists(self.db_file):
             os.remove(self.db_file)
 
@@ -90,16 +92,14 @@ class spot_setup(object):
         pass
 
     def evaluation(self):
-        if self.mode2!= "forward":
-            return self.Tw_solution[366:]
-        else:
-            return self.Tw_solution
+        pass
 
 
     def objectivefunction(self, simulation, evaluation, params=None):
         # SPOTPY expects to get one or multiple values back,
+
         # that define the performance of the model run
-        maximize= ["ABC","DEMCZ","DREAM","FSCABC","MCMC","MLE","ROPE","SA"]
+        maximize= ["ABC","DEMCZ","DREAM","FSCABC","MCMC","MLE","ROPE","SA","PSO"]
         if self.metric.upper() == 'MAE':
             if self.optimizer.upper() in maximize:
                 like = -spotpy.objectivefunctions.mae(evaluation,
@@ -133,6 +133,7 @@ class spot_setup(object):
     #Custom saving database csv
 
     def save(self, objectivefunctions, parameter, *args, **kwargs):
+
         # Custom writing database .sql
         # if os.path.exists(self.db_file):
         #     os.remove(self.db_file)

@@ -5,7 +5,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
 
-def send_email(model,email_to,results_file_location):
+def send_email(model,email_to,results_file_location1,results_file_location2):
     smtp_port = 587
     smtp_server = "smtp.gmail.com"
     email_from = os.environ.get("GMAILID")
@@ -37,14 +37,24 @@ def send_email(model,email_to,results_file_location):
 
         msg.attach(MIMEText(body, 'plain'))
 
-        filename= results_file_location
+        filename1= results_file_location1
 
-        attachment = open(filename, 'rb')
+        attachment1 = open(filename1, 'rb')
 
         attachment_package = MIMEBase('application','octet-stream')
-        attachment_package.set_payload((attachment).read())
+        attachment_package.set_payload((attachment1).read())
         encoders.encode_base64(attachment_package)
-        attachment_package.add_header('Content-Disposition',"attachment; filename= " + filename[33:])
+        attachment_package.add_header('Content-Disposition',"attachment; filename= " + filename1[33:])
+        msg.attach(attachment_package)
+
+        filename2 = results_file_location2
+
+        attachment2 = open(filename2, 'rb')
+
+        attachment_package = MIMEBase('application', 'octet-stream')
+        attachment_package.set_payload((attachment2).read())
+        encoders.encode_base64(attachment_package)
+        attachment_package.add_header('Content-Disposition', "attachment; filename= " + filename2[33:])
         msg.attach(attachment_package)
 
         text = msg.as_string()

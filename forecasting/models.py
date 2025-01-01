@@ -162,7 +162,7 @@ class SimulationRun(models.Model):
     # Basic simulation parameters
     interpolate = models.BooleanField(default=True)
     n_data_interpolate = models.IntegerField(blank=True, null=True, default=7)
-    validation_required = models.BooleanField(default=True)
+    validation_required = models.BooleanField(default=False)
     core = models.IntegerField(blank=True, null=True, default=1)
     depth = models.FloatField(blank=True, null=True, default=14.0)
     compiler = models.CharField(max_length=1, choices=COMPILER_CHOICES)
@@ -201,7 +201,8 @@ class PSOParameter(models.Model):
     swarm_size = models.IntegerField(default=2000)
     phi1 = models.FloatField(default=2.0)
     phi2 = models.FloatField(default=2.0)
-    omega = models.FloatField(default=0.5)
+    omega1 = models.FloatField(default=0.5)
+    omega2 = models.FloatField(default=0.5)
     max_iterations = models.IntegerField(default=2000)
 
 class LatinParameter(models.Model):

@@ -1,6 +1,6 @@
 from functools import partial
 import numpy as np
-from forecasting.air2water.calibrators.spotpy_params_air2water_air2stream import spot_setup
+from air2water.calibrators.spotpy_params_air2water_air2stream import spot_setup
 import pandas as pd
 
 class pso_oop:

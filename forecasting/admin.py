@@ -57,8 +57,8 @@ class ForwardParametersAdmin(admin.ModelAdmin):
 
 @admin.register(PSOParameter)
 class PSOParametersAdmin(admin.ModelAdmin):
-    fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
-    list_display = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
+    fields = ('simulation','swarm_size', 'phi1', 'phi2', 'omega1', 'omega2','max_iterations')
+    list_display = ('simulation','swarm_size', 'phi1', 'phi2', 'omega1', 'omega2', 'max_iterations')
 @admin.register(LatinParameter)
 class LatinParametersAdmin(admin.ModelAdmin):
     fields = ('simulation','num_samples',)

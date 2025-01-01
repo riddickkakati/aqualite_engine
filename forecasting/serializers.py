@@ -108,7 +108,7 @@ class ForwardParametersSerializer(serializers.ModelSerializer):
 class PSOParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = PSOParameter
-        fields = ('simulation','swarm_size', 'phi1', 'phi2', 'max_iterations')
+        fields = ('simulation','swarm_size', 'phi1', 'phi2', 'omega1', 'omega2', 'max_iterations')
 
 
 class LatinParametersSerializer(serializers.ModelSerializer):
