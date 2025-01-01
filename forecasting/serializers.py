@@ -135,7 +135,12 @@ class SimulationRunSerializer(serializers.ModelSerializer):
             'computeparameterranges', 'computeparameters',
             'log_flag', 'resampling_frequency_days',
             'resampling_frequency_weeks', 'email_send',
-            'email_list'
+            'email_list',
+            # Add these fields
+            'parameters_file',
+            'parameter_ranges_file',
+            'user_validation_file',
+            'parameters_forward'
         )
 
     def create(self, validated_data):

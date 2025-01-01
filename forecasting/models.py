@@ -174,7 +174,7 @@ class SimulationRun(models.Model):
     model = models.CharField(max_length=1, choices=MODEL_CHOICES)
     mode = models.CharField(max_length=1, choices=MODE_CHOICES)
     method = models.CharField(max_length=1, choices=METHOD_CHOICES)
-    optimizer = models.CharField(max_length=1, choices=OPTIMIZER_CHOICES)
+    optimizer = models.CharField(max_length=1, choices=OPTIMIZER_CHOICES, blank=True, null=True)
     forward_options = models.CharField(max_length=1, choices=FORWARD_CHOICES, default='W')
     error_metric = models.CharField(max_length=1, choices=ERROR_METRIC_CHOICES)
     solver = models.CharField(max_length=1, choices=SOLVER_CHOICES)
