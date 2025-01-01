@@ -592,12 +592,14 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
         results_path = f"{request.scheme}://{request.get_host()}/mediafiles/results/{simulation.user.id}_{simulation.group.id}/"
         response_data = {
             'status': simulation.status,
-            'plot_path': f"{results_path}best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
+            'calibration_plot_path': f"{results_path}calibration_best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
+            'validation_plot_path': f"{results_path}validation_best_modelrun_{simulation.id}.png" if simulation.status == "completed" else None,
             'dotty_plots': f"{results_path}dottyplots_{simulation.id}.png" if (
                         simulation.status == "completed" and simulation.mode != "forward") else None,
             'obj_function_path': f"{results_path}objectivefunctiontrace_{simulation.id}.png" if (simulation.status == "completed" and simulation.mode != "forward") else None,
             'parameter_convergence': f"{results_path}{simulation.method}_calibration_{simulation.id}.csv" if simulation.status == "completed" else None,
-            'timeseries_path': f"{results_path}results_{simulation.id}.csv" if simulation.status == "completed" else None,
+            'calibration_timeseries_path': f"{results_path}results_{simulation.id}_calibration.csv" if simulation.status == "completed" else None,
+            'validation_timeseries_path': f"{results_path}results_{simulation.id}_validation.csv" if simulation.status == "completed" else None
         }
 
         # Include error message if simulation failed

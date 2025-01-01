@@ -292,8 +292,7 @@ def dottyplots(df, theoritical_bounds, parameter_low, parameter_high, final_rmse
     plt.savefig(f"{owd}/results/{user_id}_{group_id}/dottyplots_{sim_id}.png", dpi=100)
     plt.close()  # Close the plot to avoid displaying it
 
-    return img_data
-
+    return
 
 class Air2water_OOP:
     owd = settings.MEDIA_ROOT
@@ -543,9 +542,9 @@ class Air2water_OOP:
         df_final_means.set_index('Date', inplace=True)
 
         conn = sqlite3.connect(results_file_name)
-        df_final_means_original.to_sql(f"calibration_data", conn, if_exists='replace', index=False)
+        df_final_means_original.to_sql(f"{mode}_data", conn, if_exists='replace', index=False)
         conn.close()
-        df_final_means_original.to_csv(f"{self.results_file_name[:-3]}.csv", index=False)
+        df_final_means_original.to_csv(f"{self.results_file_name[:-3]}_{mode}.csv", index=False)
 
         #results_file_location = str(owd + os.sep + results_file_name)
         #shutil.copy(results_file_location, datafolder + os.sep + str(f'{run_count}_results_{mode}.db'))
@@ -634,7 +633,7 @@ class Air2water_OOP:
         plt.xlabel("Year")
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
-        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/best_modelrun_{self.sim_id}.png", dpi=100)
+        fig.savefig(f"{owd}/results/{self.user_id}_{self.group_id}/{mode}_best_modelrun_{self.sim_id}.png", dpi=100)
 
         results_time_series = BytesIO()
         fig.savefig(results_time_series, format="png", dpi=100)
@@ -921,7 +920,7 @@ class Air2water_OOP:
                 else:
                     processor2 = YearlyDataProcessor(df2)
                     dfint2, num_missing_col3_2, missing_col3_2 = processor2.mean_year()
-                    np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/validation.csv",
+                    np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/validation_interpolated.csv",
                                dfint2, delimiter=",", fmt='%s')
                     calibration = dfint1
                     validation = dfint2
@@ -982,7 +981,7 @@ class Air2water_OOP:
                 else:
                     processor2 = YearlyDataProcessor(df2)
                     dfint2, num_missing_col3_2, missing_col3_2 = processor2.mean_year()
-                    np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/validation.csv",
+                    np.savetxt(f"{owd}/timeseries/{self.user_id}_{self.group_id}/validation_interpolated.csv",
                                dfint2, delimiter=",", fmt='%s')
                     calibration = dfint1
                     validation = dfint2
@@ -1430,7 +1429,7 @@ class Air2water_OOP:
             parameters_high = [self.spot_setup.parameters[i].maxbound for i in range(len(parameters))]
             #self.Dottyplots = None
             self.Dottyplots = dottyplots(df3, theoretical_parameters, parameters_low, parameters_high, one_day_rmse,
-                                         self.error)
+                                         self.error, self.user_id, self.group_id, self.sim_id)
         else:
             self.Dottyplots = None
 
