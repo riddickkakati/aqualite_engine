@@ -549,6 +549,7 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
                     air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
                     air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
                     air2wateruservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
+                    air2streamuservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
                     log_flag=1 if simulation.log_flag else 0,
                     resampling_frequency_days=simulation.resampling_frequency_days,
                     resampling_frequency_weeks=simulation.resampling_frequency_weeks,
