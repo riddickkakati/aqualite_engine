@@ -51,9 +51,9 @@ class ParameterFileAdmin(admin.ModelAdmin):
 @admin.register(ForwardParameter)
 class ForwardParametersAdmin(admin.ModelAdmin):
     fields = ('group', 'user', 'parameter1', 'parameter2', 'parameter3',
-                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8', 'file_path')
     list_display =  ('id', 'group', 'user', 'parameter1', 'parameter2', 'parameter3',
-                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8', 'file_path')
 
 @admin.register(PSOParameter)
 class PSOParametersAdmin(admin.ModelAdmin):

@@ -102,7 +102,7 @@ class ForwardParametersSerializer(serializers.ModelSerializer):
     class Meta:
         model = ForwardParameter
         fields = ('id', 'group', 'user', 'parameter1', 'parameter2', 'parameter3',
-                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8')
+                    'parameter4', 'parameter5', 'parameter6', 'parameter7', 'parameter8', 'file_path')
 
 
 class PSOParametersSerializer(serializers.ModelSerializer):

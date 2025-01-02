@@ -75,6 +75,7 @@ class ForwardParameter(models.Model):
     parameter6 = models.FloatField(null=True, blank=True)
     parameter7 = models.FloatField(null=True, blank=True)
     parameter8 = models.FloatField(null=True, blank=True)
+    file_path = models.CharField(max_length=256, null=True, blank=True)
 
 class ParameterRangesFile(models.Model):
     group = models.ForeignKey(ForecastingGroup, related_name='parameter_ranges_group', on_delete=models.CASCADE)

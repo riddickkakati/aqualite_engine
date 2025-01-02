@@ -24,6 +24,8 @@ from .serializers import (
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 import os
+import yaml
+from django.conf import settings
 
 
 # Existing ViewSets remain unchanged
@@ -246,6 +248,7 @@ class ParameterFileViewSet(viewsets.ModelViewSet):
         # Proceed to delete the instance
         return super().destroy(request, *args, **kwargs)
 
+
 class ParameterForwardViewSet(viewsets.ModelViewSet):
     queryset = ForwardParameter.objects.all()
     serializer_class = ForwardParametersSerializer
@@ -254,7 +257,40 @@ class ParameterForwardViewSet(viewsets.ModelViewSet):
     parser_classes = (MultiPartParser, FormParser)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        # First save the ForwardParameter object
+        forward_param = serializer.save(user=self.request.user)
+
+        # Create the parameters dictionary in the required format
+        parameters_dict = {
+            'Optimized': {
+                'model': 'Air2water',
+                'parameters': {
+                    'a1': float(forward_param.parameter1) if forward_param.parameter1 is not None else 0.0,
+                    'a2': float(forward_param.parameter2) if forward_param.parameter2 is not None else 0.0,
+                    'a3': float(forward_param.parameter3) if forward_param.parameter3 is not None else 0.0,
+                    'a4': float(forward_param.parameter4) if forward_param.parameter4 is not None else 0.0,
+                    'a5': float(forward_param.parameter5) if forward_param.parameter5 is not None else 0.0,
+                    'a6': float(forward_param.parameter6) if forward_param.parameter6 is not None else 0.0,
+                    'a7': float(forward_param.parameter7) if forward_param.parameter7 is not None else 0.0,
+                    'a8': float(forward_param.parameter8) if forward_param.parameter8 is not None else 0.0
+                }
+            }
+        }
+
+        # Create the directory if it doesn't exist
+        yaml_dir = os.path.join(settings.MEDIA_ROOT, 'parameters', f'{forward_param.user.id}_{forward_param.group.id}')
+        os.makedirs(yaml_dir, exist_ok=True)
+
+        # Define the YAML file path
+        yaml_file_path = os.path.join(yaml_dir, 'parameters_forward.yaml')
+
+        # Write the parameters to the YAML file
+        with open(yaml_file_path, 'w') as f:
+            yaml.dump(parameters_dict, f, default_flow_style=False)
+
+        # Update the ForwardParameter object with the file path
+        forward_param.file_path = yaml_file_path
+        forward_param.save()
 
     def get_queryset(self):
         # Ensure `get_queryset` always returns a valid queryset
@@ -453,6 +489,13 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             results_dir = f"{settings.MEDIA_ROOT}/results/{simulation.user.id}_{simulation.group.id}/"
             os.makedirs(results_dir, exist_ok=True)
 
+            # Get forward parameters path - either from uploaded file or from generated YAML
+            forward_parameters_path = None
+            if simulation.parameters_file:
+                forward_parameters_path = simulation.parameters_file.file.path
+            elif simulation.parameters_forward:
+                forward_parameters_path = simulation.parameters_forward.file_path
+
             # Initialize model with correct parameters
 
             swarm_size = simulation.pso_params.swarm_size if hasattr(simulation,
@@ -471,60 +514,69 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             else:
                 numbersim = None
 
-            model = Air2water_OOP(
-                user_id=simulation.user.id,
-                group_id=simulation.group.id,
-                interpolate=simulation.interpolate,
-                n_data_interpolate=simulation.n_data_interpolate,
-                validation_required=simulation.validation_required,
-                model="air2water" if simulation.model == "W" else "air2stream",
-                core=simulation.core,
-                depth=simulation.depth,
-                db_file=f"{results_dir}{simulation.method}_calibration_{simulation.id}.db",
-                results_file_name=f"{results_dir}results_{simulation_id}.db",
-                swarmsize=swarm_size,
-                phi1=phi1,
-                phi2=phi2,
-                omega1=omega1,
-                omega2=omega2,
-                maxiter=max_iterations,
-                numbersim=numbersim,
-                method="SpotPY" if simulation.method == "S" else "PYCUP",
-                mode="calibration" if simulation.mode == "C" else "forward",
-                error="RMSE" if simulation.error_metric == "R" else "KGE" if simulation.error_metric == "K" else "NS",
-                optimizer="PSO" if simulation.optimizer == "P" else "LHS" if simulation.optimizer == "L" else "MC",
-                solver="cranknicolson" if simulation.solver == "C" else "rk2" if simulation.solver == "T" else "rk4" if simulation.solver == "F" else "euler",
-                compiler="fortran" if simulation.compiler == "F" else "C",
-                CFL=simulation.CFL,
-                databaseformat="custom" if simulation.databaseformat == "C" else "ram",
-                computeparametersranges="Yes" if simulation.computeparameterranges else "No",
-                computeparameters="Yes" if simulation.computeparameters else "No",
-                forward_parameters= simulation.parameters_file.file.path if simulation.parameters_file else None,
-                parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file else None,
-                air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
-                air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
-                air2wateruservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
-                #air2streamuservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
-                log_flag=1 if simulation.log_flag else 0,
-                resampling_frequency_days=simulation.resampling_frequency_days,
-                resampling_frequency_weeks=simulation.resampling_frequency_weeks,
-                email_send=1 if simulation.email_send else 0,
-                sim_id=simulation.id,
-                email_list=simulation.email_list.split(',') if simulation.email_list else []
-            )
+            try:
+                model = Air2water_OOP(
+                    user_id=simulation.user.id,
+                    group_id=simulation.group.id,
+                    interpolate=simulation.interpolate,
+                    n_data_interpolate=simulation.n_data_interpolate,
+                    validation_required=simulation.validation_required,
+                    model="air2water" if simulation.model == "W" else "air2stream",
+                    core=simulation.core,
+                    depth=simulation.depth,
+                    db_file=f"{results_dir}{simulation.method}_calibration_{simulation.id}.db",
+                    results_file_name=f"{results_dir}results_{simulation_id}.db",
+                    swarmsize=swarm_size,
+                    phi1=phi1,
+                    phi2=phi2,
+                    omega1=omega1,
+                    omega2=omega2,
+                    maxiter=max_iterations,
+                    numbersim=numbersim,
+                    method="SpotPY" if simulation.method == "S" else "PYCUP",
+                    mode="calibration" if simulation.mode == "C" else "forward",
+                    error="RMSE" if simulation.error_metric == "R" else "KGE" if simulation.error_metric == "K" else "NS",
+                    optimizer="PSO" if simulation.optimizer == "P" else "LHS" if simulation.optimizer == "L" else "MC",
+                    solver="cranknicolson" if simulation.solver == "C" else "rk2" if simulation.solver == "T" else "rk4" if simulation.solver == "F" else "euler",
+                    compiler="fortran" if simulation.compiler == "F" else "C",
+                    CFL=simulation.CFL,
+                    databaseformat="custom" if simulation.databaseformat == "C" else "ram",
+                    computeparametersranges="Yes" if simulation.computeparameterranges else "No",
+                    computeparameters="Yes" if simulation.computeparameters else "No",
+                    forward_parameters=forward_parameters_path,
+                    parameter_ranges=simulation.parameter_ranges_file.file.path if simulation.parameter_ranges_file else None,
+                    air2waterusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
+                    air2streamusercalibrationpath=simulation.timeseries.file.path if simulation.timeseries else None,
+                    air2wateruservalidationpath=simulation.user_validation_file.file.path if simulation.user_validation_file else None,
+                    log_flag=1 if simulation.log_flag else 0,
+                    resampling_frequency_days=simulation.resampling_frequency_days,
+                    resampling_frequency_weeks=simulation.resampling_frequency_weeks,
+                    email_send=1 if simulation.email_send else 0,
+                    sim_id=simulation.id,
+                    email_list=simulation.email_list.split(',') if simulation.email_list else []
+                )
 
-            # Run the simulation
-            num_missing_col3 = model.run()
+                # Run the simulation
+                num_missing_col3 = model.run()
 
-            # Update simulation with results
-            simulation.status = "completed"
-            simulation.results_path = results_dir
-            simulation.save()
-
-            if num_missing_col3 == None:
-                simulation.status = "failed"
-                simulation.error_message = str("Validation file or flags not found for \"Validation Required\"= False. Either put \"Validation Required\"=True, or add flag, or add validation file.")
+                # Update simulation with results
+                simulation.status = "completed"
+                simulation.results_path = results_dir
                 simulation.save()
+
+                if num_missing_col3 == None:
+                    simulation.status = "failed"
+                    simulation.error_message = str(
+                        "Validation file or flags not found for \"Validation Required\"= False. Either put \"Validation Required\"=True, or add flag, or add validation file.")
+                    simulation.save()
+
+            except TypeError as e:
+                if "unsupported operand type(s) for /: 'list' and 'float'" in str(e):
+                    simulation.status = "failed"
+                    simulation.error_message = "Please provide proper input parameters"
+                    simulation.save()
+                else:
+                    raise
 
         except SimulationRun.DoesNotExist:
             # Handle case where simulation object doesn't exist
