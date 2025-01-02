@@ -574,7 +574,11 @@ class SimulationRunViewSet(viewsets.ModelViewSet):
             except TypeError as e:
                 if "unsupported operand type(s) for /: 'list' and 'float'" in str(e):
                     simulation.status = "failed"
-                    simulation.error_message = "Please provide proper input parameters"
+                    simulation.error_message = "Please provide proper input parameters (check parameter values a1-a8)"
+                    simulation.save()
+                elif "Execution failed on sql 'SELECT * FROM RESULTS': no such table: RESULTS" in str(e):
+                    simulation.status = "failed"
+                    simulation.error_message = "Please provide proper hyperparameters (settings) for the model calibration"
                     simulation.save()
                 else:
                     raise
