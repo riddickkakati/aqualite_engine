@@ -834,10 +834,10 @@ class Air2water_OOP:
             usercalibrationdatapath = self.air2streamusercalibrationpath
 
         df1 = np.loadtxt(usercalibrationdatapath)
-        if self.validation_required=="Random Percentage":
+        if self.validation_required and self.validation_required=="Random Percentage":
             array = self.random_validation_array(df1.shape[0],self.percent)
             df1=np.hstack((df1,array))
-        elif self.validation_required=="Uniform Number":
+        elif self.validation_required and self.validation_required=="Uniform Number":
             array = self.constant_array_interval(df1.shape[0],self.percent)
             df1 = np.hstack((df1, array))
         if self.mode=="forward":
@@ -870,7 +870,7 @@ class Air2water_OOP:
             uservalidationdatapath = self.air2wateruservalidationpath
         elif self.model == "air2stream":
             uservalidationdatapath = self.air2streamuservalidationpath
-        if self.validation_required == False:
+        if self.validation_required and self.validation_required == False:
             if self.model == "air2water" and dfint1.shape[1] > 6:
                 pass
             elif self.model == "air2stream" and dfint1.shape[1] > 7:
@@ -910,7 +910,7 @@ class Air2water_OOP:
         print(f"There are {num_missing_col3} missing data.")
         if self.interpolate == True and num_missing_col3:
             print(f"Interpolating...")
-            if self.validation_required == False:
+            if self.validation_required and self.validation_required == False:
                 if self.model == "air2water" and dfint1.shape[1] > 6:
                     calibration = dfint1
                     validation = dfint1
@@ -924,7 +924,7 @@ class Air2water_OOP:
                                dfint2, delimiter=",", fmt='%s')
                     calibration = dfint1
                     validation = dfint2
-            elif self.validation_required=="Uniform Percentage":
+            elif self.validation_required and self.validation_required=="Uniform Percentage":
                 calibration, validation = train_test_split(dfint1, test_size=self.percent/100, shuffle=False)
         elif self.interpolate == False:
             if num_missing_col3 != 0:
@@ -933,7 +933,7 @@ class Air2water_OOP:
                 data = pd.DataFrame(data)
                 data['interpolated'] = 0
                 data = data.to_numpy()
-                if self.validation_required == False:
+                if self.validation_required and self.validation_required == False:
                     if self.model == "air2water" and data.shape[1] > 6:
                         calibration = data
                         validation = data
@@ -946,7 +946,7 @@ class Air2water_OOP:
                         validation = pd.DataFrame(validation)
                         validation['interpolated'] = 0
                         validation = validation.to_numpy()
-                elif self.validation_required=="Uniform Percentage":
+                elif self.validation_required and self.validation_required=="Uniform Percentage":
                     calibration, validation = train_test_split(data, test_size=self.percent/100, shuffle=False)
 
             elif num_missing_col3 == 0:
@@ -954,9 +954,9 @@ class Air2water_OOP:
                 data = pd.DataFrame(data)
                 data['interpolated'] = 0
                 data = data.to_numpy()
-                if self.validation_required == "Uniform Percentage":
+                if self.validation_required and self.validation_required == "Uniform Percentage":
                     calibration, validation = train_test_split(data, test_size=self.percent/100, shuffle=False)
-                elif self.validation_required == False:
+                elif self.validation_required and self.validation_required == False:
                     if self.model == "air2water" and data.shape[1] > 6:
                         calibration = data
                         validation = data
@@ -971,8 +971,16 @@ class Air2water_OOP:
                         validation = validation.to_numpy()
 
         elif self.interpolate == True and num_missing_col3==0:
-            if self.validation_required == False:
-                if self.model == "air2water" and dfint1.shape[1] > 6:
+            if self.validation_required and self.validation_required == False:
+                ####CHECK THESE CONDITIONS IF THEY ARE CORRECT
+                if self.model == "air2water" and dfint1.shape[1] == 6:
+                    calibration = dfint1
+                    validation = dfint1
+                elif self.model == "air2stream" and dfint1.shape[1] == 7:
+                    calibration = dfint1
+                    validation = dfint1
+                ################
+                elif self.model == "air2water" and dfint1.shape[1] > 6:
                     calibration = dfint1
                     validation = dfint1
                 elif self.model == "air2stream" and dfint1.shape[1] > 7:
@@ -985,7 +993,7 @@ class Air2water_OOP:
                                dfint2, delimiter=",", fmt='%s')
                     calibration = dfint1
                     validation = dfint2
-            elif self.validation_required == "Uniform Percentage":
+            elif self.validation_required and self.validation_required == "Uniform Percentage":
                 calibration, validation = train_test_split(dfint1, test_size=self.percent / 100, shuffle=False)
 
         _, tt = self.datetimecalc(calibration)

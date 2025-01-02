@@ -27,14 +27,14 @@ class SimulationRunAdmin(admin.ModelAdmin):
     fields = (
         'group', 'user', 'timeseries', 'parameter_ranges_file', 'parameters_file', 'user_validation_file', 'parameters_forward', 'model', 'mode', 'method',
         'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'n_data_interpolate',
-        'validation_required', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
+        'validation_required', 'percent', 'core', 'depth', 'compiler', 'CFL', 'databaseformat', 'computeparameterranges',
         'computeparameters', 'log_flag', 'resampling_frequency_days', 'resampling_frequency_weeks',
         'email_send', 'email_list', 'error_message', 'status', 'results_path'
     )
 
     list_display = (
         'id', 'group', 'user', 'timeseries', 'parameters_file', 'parameters_forward', 'model', 'mode', 'method',
-        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required',
+        'optimizer', 'forward_options', 'error_metric', 'solver', 'interpolate', 'validation_required', 'percent',
         'compiler', 'databaseformat', 'status', 'start_time', 'end_time'
     )
 

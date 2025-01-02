@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import FileExtensionValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 def profile_pic_upload_path_handler(instance, filename):
     return "avatars/{user_id}_{group_id}/profile_pic.jpg".format(id=instance.user.id)
@@ -124,6 +125,13 @@ class SimulationRun(models.Model):
         ('M', 'MONTECARLO')
     ]
 
+    VALIDATION_CHOICES = [
+        ('F', 'False'),
+        ('R', 'Random_Percentage'),
+        ('U', 'Uniform_Percentage'),
+        ('N', 'Uniform_Number')
+    ]
+
     ERROR_METRIC_CHOICES = [
         ('R', 'RMSE'),
         ('K', 'KGE'),
@@ -163,7 +171,8 @@ class SimulationRun(models.Model):
     # Basic simulation parameters
     interpolate = models.BooleanField(default=True)
     n_data_interpolate = models.IntegerField(blank=True, null=True, default=7)
-    validation_required = models.BooleanField(default=False)
+    validation_required = models.CharField(max_length=1, choices=VALIDATION_CHOICES)
+    percent = models.IntegerField(validators=[MinValueValidator(1),MaxValueValidator(50)], default=10)
     core = models.IntegerField(blank=True, null=True, default=1)
     depth = models.FloatField(blank=True, null=True, default=14.0)
     compiler = models.CharField(max_length=1, choices=COMPILER_CHOICES)

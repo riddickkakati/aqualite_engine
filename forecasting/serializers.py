@@ -130,7 +130,7 @@ class SimulationRunSerializer(serializers.ModelSerializer):
             'id', 'group', 'timeseries',
             'model', 'mode', 'method', 'optimizer',
             'error_metric', 'solver', 'interpolate',
-            'n_data_interpolate', 'validation_required',
+            'n_data_interpolate', 'validation_required', 'percent',
             'core', 'depth', 'compiler', 'databaseformat',
             'computeparameterranges', 'computeparameters',
             'log_flag', 'resampling_frequency_days',
