@@ -41,11 +41,25 @@ class GroupFullSerializer(serializers.ModelSerializer):
         monitoring_members = obj.monitoring_members.all()
         return MemberSerializer(monitoring_members, many=True).data
 
-class MonitoringRunSerializer(serializers.ModelSerializer):
-    user = UserSerializer()
-    group = GroupSerializer()
 
+class MonitoringRunSerializer(serializers.ModelSerializer):
     class Meta:
         model = MonitoringRun
         fields = (
-            'id', 'user', 'group', 'start_date', 'end_date', 'longitude', 'latitude', 'satellite', 'parameter', 'error_message', 'updated_at', 'status', 'start_time', 'end_time', 'results_path')
+            'id',
+            'group',
+            'start_date',
+            'end_date',
+            'longitude',
+            'latitude',
+            'satellite',
+            'parameter',
+            'cloud_cover',
+            'service_account',
+            'service_key'
+        )
+
+    def create(self, validated_data):
+        # Ensure we use the authenticated user
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)

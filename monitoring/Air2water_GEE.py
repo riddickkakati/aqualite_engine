@@ -1,10 +1,11 @@
 import ee
-
-# Initialize Google Earth Engine
-try:
-    ee.Initialize()
-except ee.EEException as e:
-    print(str(e))
+import folium
+import requests
+from PIL import Image
+from io import BytesIO
+import numpy as np
+import matplotlib.pyplot as plt
+from django.conf import settings
 
 def MNDWICalculator(green, SWIR1, NIR, red, blue, image):
 
@@ -49,17 +50,19 @@ def CIcalc(red, green):
 
 class Air2water_monit:
 
-    def __init__(self, start_date=None, end_date=None, long=None, lat=None, cc=None, satellite=None, variable=None):
+    def __init__(self, start_date=None, end_date=None, long=None, lat=None, cc=None, satellite=None, variable=None, service_account=None, service_key=None, user_id=0, group_id=0, sim_id=0):
         self.start_date= start_date
         self.end_date= end_date
         self.long= long
         self.lat= lat
-        self.geometry = ee.Geometry.Point([self.lat, self.long], 'EPSG:4326')
-        # table_shp = "/home/dicam01/Downloads/HydroLAKES_polys_v10_shp/HydroLAKES_polys_v10_shp/HydroLAKES_polys_v10.shp"
-        self.table = ee.FeatureCollection('users/hydrosquas/HydroLAKES_polys_v10_shp')
-        self.cc= ee.Number(cc)
+        self.cc= cc
         self.satellite=satellite
         self.variable=variable
+        self.service_account=service_account
+        self.service_key=service_key
+        self.user_id=user_id
+        self.group_id=group_id
+        self.sim_id=sim_id
 
     def atmosphericcorrection_landsat(self, L8, geometry, start_date, end_date, cc):
         filter = L8.filterBounds(geometry).filterDate(start_date, end_date).filterMetadata('CLOUD_COVER', 'less_than',
@@ -324,70 +327,126 @@ class Air2water_monit:
     def map_clip_function(self,image_collection, buffered_shapefile):
         return image_collection.map(lambda image: image.clip(buffered_shapefile))
 
-
     def run(self):
+        owd = settings.MEDIA_ROOT
+        # Initialize Google Earth Engine
+        try:
+            service_account = self.service_account
+            credentials = ee.ServiceAccountCredentials(service_account, self.service_key)
+            ee.Initialize(credentials)
+        except ee.EEException as e:
+            print(str(e))
 
+        self.cc = ee.Number(self.cc)
+        self.geometry = ee.Geometry.Point([self.lat, self.long], 'EPSG:4326')
+        self.start_date = ee.Date(str(self.start_date))
+        self.end_date = ee.Date(str(self.end_date))
 
-        # Filter the feature collection by a buffer around the geometry
+        # Create base folium map centered on the point of interest
+        m = folium.Map(
+            location=[self.long, self.lat],
+            zoom_start=10
+        )
+
+        # Get and process lake data
+        self.table = ee.FeatureCollection("projects/sat-io/open-datasets/HydroLakes/lake_poly_v10")
         filtered_table = self.table.filterBounds(self.geometry.buffer(300000))
-
-        # Get the nearest feature
         nearest_feature = self.find_nearest_feature(filtered_table, self.geometry)
-
-        # Convert the nearest feature to a Feature object
         shapefile = ee.Feature(nearest_feature)
+        buffered_shapefile = shapefile.buffer(1000)
 
-        # Define the buffer size (in meters)
-        buffer_size = 1000
+        # Add lake boundary to map
+        lake_coords = ee.Feature(nearest_feature).geometry().coordinates().getInfo()
+        folium.GeoJson(
+            data={
+                "type": "Feature",
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": lake_coords
+                }
+            },
+            style_function=lambda x: {"fillColor": "blue", "color": "blue", "weight": 2, "fillOpacity": 0.1}
+        ).add_to(m)
 
-        # Add buffer around the shapefile
-        buffered_shapefile = shapefile.buffer(buffer_size)
-        # difference2 = table
-
-        # Clip the MODIS LST dataset using the buffered shapefile.
-
-        if self.satellite==1:
-
+        # Get and process satellite data
+        if self.satellite == 1:
             tile = ee.ImageCollection("LANDSAT/LC08/C02/T1_L2")
-            tile = self.map_clip_function(tile,buffered_shapefile)
+            tile = self.map_clip_function(tile, buffered_shapefile)
             Reflectance = self.atmosphericcorrection_landsat(tile, self.geometry, self.start_date, self.end_date,
                                                              self.cc)
-            if self.variable==1:
-                result = ee.ImageCollection(self.CI_Landsat(Reflectance).get('Chlorophyllindex'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
 
-            if self.variable==2:
+            if self.variable == 1:
                 result = ee.ImageCollection(self.CI_Landsat(Reflectance).get('Chlorophyllindex'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
-
-            elif self.variable==3:
+                layer_name = 'Chlorophyll Index'
+            elif self.variable == 2:
+                result = ee.ImageCollection(self.CI_Landsat(Reflectance).get('Chlorophyllindex'))
+                layer_name = 'Turbidity Index'
+            elif self.variable == 3:
                 result = ee.ImageCollection(self.DO_Landsat(Reflectance).get('Dissolvedoxygen'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
+                layer_name = 'Dissolved Oxygen'
 
-
-        elif self.satellite==2:
+        elif self.satellite == 2:
             tile = ee.ImageCollection("COPERNICUS/S2_SR")
             tile = self.map_clip_function(tile, buffered_shapefile)
             Reflectance = self.atmosphericcorrection_sentinel(tile, self.geometry, self.start_date, self.end_date,
-                                                             self.cc)
+                                                              self.cc)
+
             if self.variable == 1:
                 result = ee.ImageCollection(self.CI_Sentinel(Reflectance).get('Chlorophyllindex'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
-
-            if self.variable == 2:
+                layer_name = 'Chlorophyll Index'
+            elif self.variable == 2:
                 result = ee.ImageCollection(self.TI_Sentinel(Reflectance).get('Turbidityindex'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
-
-            elif self.variable==3:
+                layer_name = 'Turbidity Index'
+            elif self.variable == 3:
                 result = ee.ImageCollection(self.DO_Sentinel(Reflectance).get('Dissolvedoxygen'))
-                # geemap.download_ee_image(result.first(), f"Landsat_{start_date}.tif", scale=100)
+                layer_name = 'Dissolved Oxygen'
 
-        thumb_url = result.first().getThumbUrl(
-            {'min': 0, 'max': 0.1, 'dimensions': 1024, 'format': 'png', 'palette': ['000000', 'FFFFFF']})
-        print(thumb_url)
+        thumb_url = result.first().getThumbUrl({'min':0, 'max': 0.1, 'dimensions': 1024, 'format': 'png', 'palette': ['000000','FFFFFF']})
+        response = requests.get(thumb_url)
+        img = Image.open(BytesIO(response.content)).convert("RGBA")
 
-        return thumb_url
+        # Convert the image to a numpy array
+        array = np.array(img)
+
+        # Extract the red channel and the alpha channel
+        red_channel = array[:, :, 0]
+        alpha_channel = array[:, :, 3]
+
+        # Mask out the transparent pixels
+        masked_red_channel = np.ma.masked_where(alpha_channel == 0, red_channel)
+
+        # Plot the masked array
+        plt.figure(figsize=[8, 8])
+        maxm = masked_red_channel.max()
+        minm = masked_red_channel.min()
+        plt.imshow(masked_red_channel, cmap="jet", clim=(minm, maxm), origin="upper", vmin=minm, vmax=maxm)
+        plt.colorbar(shrink=0.8)
+        plt.axis('off')
+        plt.tight_layout()
+        plt.savefig(f"{owd}/monitoring_results/{self.user_id}_{self.group_id}/{self.satellite}_{self.variable}_{self.sim_id}.png", dpi=100)
+
+        # Add result as a tile layer
+        map_id_dict = result.first().getMapId({
+            'min': 0,
+            'max': 0.1,
+            'palette': ['000000', 'FFFFFF']
+        })
+
+        folium.TileLayer(
+            tiles=map_id_dict['tile_fetcher'].url_format,
+            attr='Google Earth Engine',
+            name=layer_name,
+            overlay=True,
+            control=True
+        ).add_to(m)
+
+        # Add layer control
+        folium.LayerControl().add_to(m)
+
+        # Return the HTML representation of the map
+        return m._repr_html_()
 
 if __name__ == "__main__":
-    Run = Air2water_monit(start_date='2022-03-01',end_date='2022-12-15',lat=10.683,long=45.667, cc=7, satellite=2, variable=2)
-    thumb=Run.run()
+    Run = Air2water_monit(start_date='2022-03-01',end_date='2022-12-15',lat=10.683,long=45.667, cc=7, satellite=2, variable=2, service_account='hydrosquas-monitoring@ee-hydrosquas-riddick.iam.gserviceaccount.com' , service_key='/home/riddick/Downloads/ee-hydrosquas-riddick-a7cc9060a474.json')
+    folium=Run.run()
+    print(thumb)

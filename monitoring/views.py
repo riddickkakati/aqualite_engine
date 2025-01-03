@@ -22,6 +22,8 @@ from .serializers import MonitoringRunSerializer, GroupSerializer, GroupFullSeri
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from .Air2water_GEE import Air2water_monit
+from django.conf import settings
+import os
 
 
 # Existing ViewSets remain unchanged
@@ -193,56 +195,58 @@ class MonitoringRunViewSet(viewsets.ModelViewSet):
     @staticmethod
     def run_monitoring_process(monitoring_id):
         """
-        Static method to run the simulation in a separate process
+        Static method to run the monitoring process in a separate process
         """
         monitoring = None
         try:
             monitoring = MonitoringRun.objects.get(pk=monitoring_id)
 
-            Run = Air2water_monit(start_date='2022-03-01', end_date='2022-12-15', lat=10.683, long=45.667, cc=7,
-                                  satellite=2, variable=2)
-            thumb = Run.run()
+            results_dir = f"{settings.MEDIA_ROOT}/monitoring_results/{monitoring.user.id}_{monitoring.group.id}/"
+            os.makedirs(results_dir, exist_ok=True)
 
-            variable=0
-
+            variable = 0
             if monitoring.parameter == "C":
-                variable = 1,
+                variable = 1
             elif monitoring.parameter == "T":
-                variable = 2,
+                variable = 2
             elif monitoring.parameter == "D":
                 variable = 3
 
             # Initialize model with correct parameters
             model = Air2water_monit(
+                user_id=monitoring.user_id,
+                group_id=monitoring.group_id,
+                sim_id=monitoring.id,
                 start_date=monitoring.start_date,
                 end_date=monitoring.end_date,
                 long=monitoring.longitude,
                 lat=monitoring.latitude,
                 cc=7,
                 satellite=2 if monitoring.satellite == "S" else 1,
-                variable=variable
+                variable=variable,
+                service_account=monitoring.service_account,
+                service_key=monitoring.service_key
             )
 
-            # Run the simulation
-            num_missing_col3 = model.run()
+            # Run the analysis and get the interactive map HTML
+            map_html = model.run()
 
-            # Update simulation with results
+            # Update monitoring with results
             monitoring.status = "completed"
-            monitoring.results_path = num_missing_col3
+            monitoring.results_path = map_html  # Store the map HTML
             monitoring.save()
 
         except MonitoringRun.DoesNotExist:
-            # Handle case where simulation object doesn't exist
-            print(f"Simulation with id {monitoring_id} not found")
+            print(f"Monitoring run with id {monitoring_id} not found")
             return
 
         except Exception as e:
             error_message = str(e)
-            print(f"Error in simulation {monitoring_id}: {error_message}")
+            print(f"Error in monitoring {monitoring_id}: {error_message}")
 
             if monitoring:
                 monitoring.status = "failed"
-                monitoring.error_message = error_message[:500]  # Truncate if too long
+                monitoring.error_message = error_message[:500]
                 monitoring.save()
 
     @action(methods=['post'], detail=True)
@@ -292,14 +296,23 @@ class MonitoringRunViewSet(viewsets.ModelViewSet):
         monitoring = self.get_object()
 
         if monitoring.user.id != request.user.id:
-            return Response({"detail": "You cannot delete other users' data."}, status=status.HTTP_403_FORBIDDEN)
+            return Response({"detail": "You cannot access other users' data."},
+                            status=status.HTTP_403_FORBIDDEN)
 
+        results_path = f"{request.scheme}://{request.get_host()}/mediafiles/monitoring_results/{monitoring.user_id}_{monitoring.group.id}/"
+        filename1= 2 if monitoring.satellite == "S" else 1
+        if monitoring.parameter == "C":
+            filename2 = 1
+        elif monitoring.parameter == "T":
+            filename2 = 2
+        elif monitoring.parameter == "D":
+            filename2 = 3
         response_data = {
             'status': monitoring.status,
-            'map_path': monitoring.results_path
+            'map_html': monitoring.results_path if monitoring.status == "completed" else None,
+            'map_download': f"{results_path}{filename1}_{filename2}_{monitoring.id}.png" if monitoring.status == "completed" else None
         }
 
-        # Include error message if simulation failed
         if monitoring.status == "failed" and hasattr(monitoring, 'error_message'):
             response_data['error_message'] = monitoring.error_message
 

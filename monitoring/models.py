@@ -25,8 +25,8 @@ class MonitoringComment(models.Model):
     description = models.CharField(max_length=256, null=False, unique=False)
     time = models.DateTimeField(auto_now_add=True)
 
-class MonitoringRun(models.Model):
 
+class MonitoringRun(models.Model):
     SATELLITE_TILE = [
         ('L', 'Landsat'),
         ('S', 'Sentinel')
@@ -38,17 +38,33 @@ class MonitoringRun(models.Model):
         ('D', 'DO')
     ]
 
+    # Existing fields
     group = models.ForeignKey(MonitoringGroup, related_name='monitoring_group', on_delete=models.CASCADE)
     user = models.ForeignKey(User, related_name='monitoring_runs', on_delete=models.CASCADE)
+
+    # Date fields
     start_date = models.DateField(null=False, blank=False)
     end_date = models.DateField(null=False, blank=False)
+
+    # Location fields
     longitude = models.FloatField(null=False, blank=False)
     latitude = models.FloatField(null=False, blank=False)
+
+    # Analysis parameters
     satellite = models.CharField(max_length=1, choices=SATELLITE_TILE)
     parameter = models.CharField(max_length=1, choices=PARAMETER)
-    updated_at = models.DateTimeField(auto_now=True)
-    error_message = models.TextField(null=True, blank=True)
+
+    # New fields for Air2water_monit
+    cloud_cover = models.IntegerField(default=7)
+    service_account = models.CharField(max_length=255, default="your-service-account@project.iam.gserviceaccount.com")
+    service_key = models.CharField(max_length=255, default="path/to/your/service-key.json")
+
+    # Status and timing fields
     status = models.CharField(max_length=20, default='pending')
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
-    results_path = models.CharField(max_length=512, null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    # Results and error handling
+    results_path = models.TextField(null=True, blank=True, help_text="Stores the Folium map HTML")
+    error_message = models.TextField(null=True, blank=True)
