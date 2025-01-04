@@ -37,7 +37,7 @@ class GroupFullSerializer(serializers.ModelSerializer):
         serializer = CommentSerializer(monitoring_comments, many=True)
         return serializer.data
 
-    def get_forecasting_members(self, obj):  # Changed name to match your field
+    def get_monitoring_members(self, obj):  # Changed name to match your field
         monitoring_members = obj.monitoring_members.all()
         return MemberSerializer(monitoring_members, many=True).data
 
@@ -63,3 +63,10 @@ class MonitoringRunSerializer(serializers.ModelSerializer):
         # Ensure we use the authenticated user
         validated_data['user'] = self.context['request'].user
         return super().create(validated_data)
+
+class GroupMonitorSerializer(serializers.ModelSerializer):
+    simulations = MonitoringRunSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = MonitoringGroup
+        fields = ('id', 'name', 'location', 'description', 'simulations')

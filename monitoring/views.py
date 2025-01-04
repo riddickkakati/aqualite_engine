@@ -11,14 +11,18 @@ from .models import (
 )
 
 from forecasting.models import (
-    ForecastingGroup, UserProfile, ForecastingMember, ForecastingComment
+    UserProfile
+)
+
+from monitoring.models import (
+    MonitoringGroup, MonitoringMember, MonitoringComment
 )
 
 from forecasting.serializers import (
     UserSerializer, UserProfileSerializer, ChangePasswordSerializer
 )
 
-from .serializers import MonitoringRunSerializer, GroupSerializer, GroupFullSerializer, MemberSerializer, CommentSerializer
+from .serializers import MonitoringRunSerializer, GroupSerializer, GroupFullSerializer, MemberSerializer, CommentSerializer, GroupMonitorSerializer
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from .Air2water_GEE import Air2water_monit
@@ -82,7 +86,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CommentViewset(viewsets.ModelViewSet):
-    queryset = ForecastingComment.objects.all()
+    queryset = MonitoringComment.objects.all()
     serializer_class = CommentSerializer
 
 
@@ -92,7 +96,7 @@ class UserProfileViewset(viewsets.ModelViewSet):
 
 
 class GroupViewset(viewsets.ModelViewSet):
-    queryset = ForecastingGroup.objects.all()
+    queryset = MonitoringGroup.objects.all()
     serializer_class = GroupSerializer
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticatedOrReadOnly,)
@@ -100,24 +104,24 @@ class GroupViewset(viewsets.ModelViewSet):
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if request.query_params.get('forecast_data', False):
-            serializer = GroupForecastSerializer(instance, many=False, context={'request': request})
+            serializer = GroupMonitorSerializer(instance, many=False, context={'request': request})
         else:
             serializer = GroupFullSerializer(instance, many=False, context={'request': request})
         return Response(serializer.data)
 
 
 class MemberViewset(viewsets.ModelViewSet):
-    queryset = ForecastingMember.objects.all()
+    queryset = MonitoringMember.objects.all()
     serializer_class = MemberSerializer
 
     @action(methods=['post'], detail=False)
     def join(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = ForecastingGroup.objects.get(id=request.data['group'])
+                group = MonitoringGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = ForecastingMember.objects.create(group=group, user=user, admin=request.data.get('admin', False))
+                member = MonitoringMember.objects.create(group=group, user=user, admin=request.data.get('admin', False))
                 serializer = MemberSerializer(member, many=False)
                 response = {'message': 'Joined group', 'results': serializer.data}
                 return Response(response, status=status.HTTP_200_OK)
@@ -132,10 +136,10 @@ class MemberViewset(viewsets.ModelViewSet):
     def leave(self, request):
         if 'group' in request.data and 'user' in request.data:
             try:
-                group = ForecastingGroup.objects.get(id=request.data['group'])
+                group = MonitoringGroup.objects.get(id=request.data['group'])
                 user = User.objects.get(id=request.data['user'])
 
-                member = ForecastingMember.objects.get(group=group, user=user)
+                member = MonitoringMember.objects.get(group=group, user=user)
                 member.delete()
                 response = {'message': 'Left group'}
                 return Response(response, status=status.HTTP_200_OK)
