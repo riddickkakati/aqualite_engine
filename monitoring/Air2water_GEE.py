@@ -342,11 +342,52 @@ class Air2water_monit:
         self.start_date = ee.Date(str(self.start_date))
         self.end_date = ee.Date(str(self.end_date))
 
+        # Get parameter name for title
+        parameter_names = {
+            1: 'Chlorophyll-a',
+            2: 'Turbidity',
+            3: 'Dissolved Oxygen'
+        }
+        satellite_names = {
+            1: 'Landsat',
+            2: 'Sentinel'
+        }
+
+        parameter_name = parameter_names.get(self.variable, 'Unknown Parameter')
+        satellite_name = satellite_names.get(self.satellite, 'Unknown Satellite')
+
         # Create base folium map centered on the point of interest
         m = folium.Map(
             location=[self.long, self.lat],
             zoom_start=10
         )
+
+        # Add title to map
+        title_html = '''
+            <div style="position: fixed; 
+                        top: 10px; 
+                        left: 50px; 
+                        width: 500px; 
+                        height: 90px; 
+                        z-index:9999; 
+                        background-color: rgba(255, 255, 255, 0.8);
+                        border-radius: 10px;
+                        padding: 10px;
+                        font-size: 16px;
+                        font-weight: bold;">
+                <p>{} Monitoring Results<br>
+                {} Data from {} to {}<br>
+                Location: {:.3f}°N, {:.3f}°E</p>
+            </div>
+            '''.format(
+            parameter_name,
+            satellite_name,
+            self.start_date.format('YYYY-MM-dd').getInfo(),
+            self.end_date.format('YYYY-MM-dd').getInfo(),
+            self.long,
+            self.lat
+        )
+        m.get_root().html.add_child(folium.Element(title_html))
 
         # Get and process lake data
         self.table = ee.FeatureCollection("projects/sat-io/open-datasets/HydroLakes/lake_poly_v10")
@@ -367,6 +408,23 @@ class Air2water_monit:
             },
             style_function=lambda x: {"fillColor": "blue", "color": "blue", "weight": 2, "fillOpacity": 0.1}
         ).add_to(m)
+
+        # Define color palettes based on parameter
+        if self.variable == 1:  # Chlorophyll-a
+            color_palette = ['#313695', '#4575B4', '#74ADD1', '#ABD9E9', '#E0F3F8',
+                             '#FFFFBF', '#FEE090', '#FDAE61', '#F46D43', '#D73027', '#A50026']
+            legend_title = 'Chlorophyll-a (mg/L)'
+            value_range = [0, 0.1]  # Adjust based on typical Chl-a values
+        elif self.variable == 2:  # Turbidity
+            color_palette = ['#313695', '#4575B4', '#74ADD1', '#ABD9E9', '#E0F3F8',
+                             '#FFFFBF', '#FEE090', '#FDAE61', '#F46D43', '#D73027', '#A50026']
+            legend_title = 'Turbidity (NTU)'
+            value_range = [0, 0.1]  # Adjust based on typical turbidity values
+        else:  # Dissolved Oxygen
+            color_palette = ['#A50026', '#D73027', '#F46D43', '#FDAE61', '#FEE090',
+                             '#FFFFBF', '#E0F3F8', '#ABD9E9', '#74ADD1', '#4575B4', '#313695']
+            legend_title = 'Dissolved Oxygen (mg/L)'
+            value_range = [0, 0.1]  # Adjust based on typical DO values
 
         # Get and process satellite data
         if self.satellite == 1:
@@ -401,7 +459,13 @@ class Air2water_monit:
                 result = ee.ImageCollection(self.DO_Sentinel(Reflectance).get('Dissolvedoxygen'))
                 layer_name = 'Dissolved Oxygen'
 
-        thumb_url = result.first().getThumbUrl({'min':0, 'max': 0.1, 'dimensions': 1024, 'format': 'png', 'palette': ['000000','FFFFFF']})
+        thumb_url = result.first().getThumbUrl({
+            'min': value_range[0],
+            'max': value_range[1],
+            'dimensions': 1024,
+            'format': 'png',
+            'palette': color_palette
+        })
         response = requests.get(thumb_url)
         img = Image.open(BytesIO(response.content)).convert("RGBA")
 
@@ -420,16 +484,18 @@ class Air2water_monit:
         maxm = masked_red_channel.max()
         minm = masked_red_channel.min()
         plt.imshow(masked_red_channel, cmap="jet", clim=(minm, maxm), origin="upper", vmin=minm, vmax=maxm)
-        plt.colorbar(shrink=0.8)
+        plt.colorbar(shrink=0.8, label=legend_title)
         plt.axis('off')
         plt.tight_layout()
-        plt.savefig(f"{owd}/monitoring_results/{self.user_id}_{self.group_id}/{self.satellite}_{self.variable}_{self.sim_id}.png", dpi=100)
+        plt.savefig(
+            f"{owd}/monitoring_results/{self.user_id}_{self.group_id}/{self.satellite}_{self.variable}_{self.sim_id}.png",
+            dpi=100)
 
         # Add result as a tile layer
         map_id_dict = result.first().getMapId({
-            'min': 0,
-            'max': 0.1,
-            'palette': ['000000', 'FFFFFF']
+            'min': value_range[0],
+            'max': value_range[1],
+            'palette': color_palette
         })
 
         folium.TileLayer(
@@ -439,6 +505,40 @@ class Air2water_monit:
             overlay=True,
             control=True
         ).add_to(m)
+
+        # Add colormap legend
+        values = np.linspace(value_range[1], value_range[0], len(color_palette))
+        values = ['{:.3f}'.format(v) for v in values]
+
+        legend_html = '''
+                <div style="position: fixed; 
+                            bottom: 50px; 
+                            right: 50px; 
+                            width: 180px;
+                            z-index:9999; 
+                            background-color: rgba(255, 255, 255, 0.8);
+                            border-radius: 10px;
+                            padding: 10px;
+                            font-family: sans-serif;
+                            font-size: 12px;">
+                    <p style="margin: 0 0 10px 0; font-size: 13px; font-weight: bold;">{}</p>
+                    <div style="display: flex; flex-direction: column; gap: 3px;">
+            '''.format(legend_title)
+
+        for value, color in zip(values, color_palette):
+            legend_html += '''
+                    <div style="display: flex; align-items: center; height: 15px;">
+                        <div style="min-width: 20px; height: 15px; background-color: {}; margin-right: 8px;"></div>
+                        <span style="white-space: nowrap;">{}</span>
+                    </div>
+                '''.format(color, value)
+
+        legend_html += '''
+                    </div>
+                </div>
+            '''
+
+        m.get_root().html.add_child(folium.Element(legend_html))
 
         # Add layer control
         folium.LayerControl().add_to(m)

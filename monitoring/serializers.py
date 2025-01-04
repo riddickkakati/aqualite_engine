@@ -56,7 +56,7 @@ class MonitoringRunSerializer(serializers.ModelSerializer):
             'parameter',
             'cloud_cover',
             'service_account',
-            'service_key'
+            'service_key_file'
         )
 
     def create(self, validated_data):

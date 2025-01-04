@@ -1,5 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.core.validators import FileExtensionValidator
+
+def user_validation_path_handler(instance, filename):
+    return "timeseries/{user_id}_{group_id}/user_validation.txt".format(user_id=instance.user.id, group_id=instance.group.id)
 
 class MonitoringGroup(models.Model):
     name = models.CharField(max_length=32, null=False, unique=False)
@@ -57,7 +61,12 @@ class MonitoringRun(models.Model):
     # New fields for Air2water_monit
     cloud_cover = models.IntegerField(default=7)
     service_account = models.CharField(max_length=255, default="your-service-account@project.iam.gserviceaccount.com")
-    service_key = models.CharField(max_length=255, default="path/to/your/service-key.json")
+    service_key_file = models.FileField(
+        upload_to=user_validation_path_handler,
+        validators=[FileExtensionValidator(allowed_extensions=['json'])],
+        blank=True,
+        null=True
+    )
 
     # Status and timing fields
     status = models.CharField(max_length=20, default='pending')

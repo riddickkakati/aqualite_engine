@@ -32,7 +32,7 @@ class SimulationRunAdmin(admin.ModelAdmin):
         'parameter',
         'cloud_cover',
         'service_account',
-        'service_key',
+        'service_key_file',
         'status'
     )
 
@@ -47,6 +47,6 @@ class SimulationRunAdmin(admin.ModelAdmin):
             'parameter',
             'cloud_cover',
             'service_account',
-            'service_key',
+            'service_key_file',
             'status'
         )

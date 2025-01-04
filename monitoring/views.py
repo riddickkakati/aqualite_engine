@@ -229,7 +229,7 @@ class MonitoringRunViewSet(viewsets.ModelViewSet):
                 satellite=2 if monitoring.satellite == "S" else 1,
                 variable=variable,
                 service_account=monitoring.service_account,
-                service_key=monitoring.service_key
+                service_key=monitoring.service_key_file.path
             )
 
             # Run the analysis and get the interactive map HTML
