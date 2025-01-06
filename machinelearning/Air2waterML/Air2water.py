@@ -20,6 +20,7 @@ from sklearn.model_selection import KFold
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.decomposition import KernelPCA
+import zipfile
 
 
 def interpolate_missing_data(self, df_orig):
@@ -610,6 +611,122 @@ class ML_Model:
             'cv_std': cv_scores.std()
         }
 
+    def perform_grid_search(self, X_train, y_train, X_val, y_val):
+        """Perform grid search for all ML algorithms"""
+        from sklearn.model_selection import GridSearchCV
+        import matplotlib
+        matplotlib.use('Agg')  # Use non-interactive backend
+
+        # Dictionary to store best parameters and scores
+        grid_search_results = {}
+
+        # SVR parameters
+        try:
+            print("Performing grid search for SVR...")
+            svr_params = {
+                'C': [0.1, 1, 10],
+                'kernel': ['rbf', 'linear'],
+                'gamma': ['scale', 'auto'],
+                'epsilon': [0.1, 0.2]
+            }
+            svr = SVR()
+            svr_grid = GridSearchCV(svr, svr_params, cv=5, n_jobs=1, scoring='r2')  # Using n_jobs=1
+            svr_grid.fit(X_train, y_train)
+            grid_search_results['SVR'] = {
+                'best_params': svr_grid.best_params_,
+                'best_score': svr_grid.best_score_,
+                'validation_score': svr_grid.score(X_val, y_val)
+            }
+        except Exception as e:
+            print(f"Error in SVR grid search: {str(e)}")
+            grid_search_results['SVR'] = {'error': str(e)}
+
+        # Random Forest parameters
+        try:
+            print("Performing grid search for Random Forest...")
+            rf_params = {
+                'n_estimators': [100, 200],
+                'max_depth': [10, 20, None],
+                'min_samples_split': [2, 5],
+                'min_samples_leaf': [1, 2]
+            }
+            rf = RandomForestRegressor(random_state=42)
+            rf_grid = GridSearchCV(rf, rf_params, cv=5, n_jobs=1, scoring='r2')  # Using n_jobs=1
+            rf_grid.fit(X_train, y_train)
+            grid_search_results['RandomForest'] = {
+                'best_params': rf_grid.best_params_,
+                'best_score': rf_grid.best_score_,
+                'validation_score': rf_grid.score(X_val, y_val)
+            }
+        except Exception as e:
+            print(f"Error in Random Forest grid search: {str(e)}")
+            grid_search_results['RandomForest'] = {'error': str(e)}
+
+        # XGBoost parameters
+        try:
+            print("Performing grid search for XGBoost...")
+            xgb_params = {
+                'n_estimators': [100, 200],
+                'max_depth': [3, 5],
+                'learning_rate': [0.01, 0.1],
+                'subsample': [0.8, 1.0]
+            }
+            xgb = XGBRegressor(random_state=42)
+            xgb_grid = GridSearchCV(xgb, xgb_params, cv=5, n_jobs=1, scoring='r2')  # Using n_jobs=1
+            xgb_grid.fit(X_train, y_train)
+            grid_search_results['XGBoost'] = {
+                'best_params': xgb_grid.best_params_,
+                'best_score': xgb_grid.best_score_,
+                'validation_score': xgb_grid.score(X_val, y_val)
+            }
+        except Exception as e:
+            print(f"Error in XGBoost grid search: {str(e)}")
+            grid_search_results['XGBoost'] = {'error': str(e)}
+
+        # Decision Tree parameters
+        try:
+            print("Performing grid search for Decision Tree...")
+            dt_params = {
+                'max_depth': [5, 10, None],
+                'min_samples_split': [2, 5],
+                'min_samples_leaf': [1, 2],
+                'max_features': ['auto', 'sqrt']
+            }
+            dt = DecisionTreeRegressor(random_state=42)
+            dt_grid = GridSearchCV(dt, dt_params, cv=5, n_jobs=1, scoring='r2')  # Using n_jobs=1
+            dt_grid.fit(X_train, y_train)
+            grid_search_results['DecisionTree'] = {
+                'best_params': dt_grid.best_params_,
+                'best_score': dt_grid.best_score_,
+                'validation_score': dt_grid.score(X_val, y_val)
+            }
+        except Exception as e:
+            print(f"Error in Decision Tree grid search: {str(e)}")
+            grid_search_results['DecisionTree'] = {'error': str(e)}
+
+        # CatBoost parameters
+        try:
+            print("Performing grid search for CatBoost...")
+            catboost_params = {
+                'iterations': [100, 200],
+                'learning_rate': [0.01, 0.1],
+                'depth': [4, 6],
+                'l2_leaf_reg': [3, 5]
+            }
+            catboost = CatBoostRegressor(verbose=False, random_state=42)
+            catboost_grid = GridSearchCV(catboost, catboost_params, cv=5, n_jobs=1, scoring='r2')  # Using n_jobs=1
+            catboost_grid.fit(X_train, y_train)
+            grid_search_results['CatBoost'] = {
+                'best_params': catboost_grid.best_params_,
+                'best_score': catboost_grid.best_score_,
+                'validation_score': catboost_grid.score(X_val, y_val)
+            }
+        except Exception as e:
+            print(f"Error in CatBoost grid search: {str(e)}")
+            grid_search_results['CatBoost'] = {'error': str(e)}
+
+        return grid_search_results
+
     def handle_nan_values(self, df):
         """Replace NaN values with climatological means."""
         import pandas as pd
@@ -643,6 +760,34 @@ class ML_Model:
         df = df.drop('month_day', axis=1)
 
         return df.values
+
+    def create_results_zip(self):
+        """Create a zip file of all results"""
+
+        # Create the results directory path
+        results_dir = f"{self.owd}/results/{self.user_id}_{self.group_id}/"
+
+        zip_filename = f"{self.owd}/results/{self.user_id}_{self.group_id}/results_{self.user_id}_{self.group_id}.zip"
+
+        try:
+            # Create zip file
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Walk through the results directory
+                for root, dirs, files in os.walk(results_dir):
+                    for file in files:
+                        # Get the full path of the file
+                        file_path = os.path.join(root, file)
+                        # Get the relative path for the archive
+                        rel_path = os.path.relpath(file_path, results_dir)
+                        # Add file to zip
+                        zipf.write(file_path, rel_path)
+
+            print(f"\nResults have been zipped successfully to: {zip_filename}")
+            return zip_filename
+
+        except Exception as e:
+            print(f"\nError creating zip file: {str(e)}")
+            return None
 
     def run(self):
         """Main execution method"""
@@ -940,17 +1085,65 @@ class ML_Model:
                 'cv_std': model_results['cv_std']
             }
 
+        # Perform grid search on original data
+        print("\nPerforming grid search on original scaled data...")
+        grid_search_results_orig = self.perform_grid_search(X_train_scaled, train_data['y'],
+                                                            X_val_scaled, val_data['y'])
+
+        # Perform grid search on PCA transformed data
+        print("\nPerforming grid search on PCA transformed data...")
+        grid_search_results_pca = self.perform_grid_search(X_train_pca, train_data['y'],
+                                                           X_val_pca, val_data['y'])
+
+        # Perform grid search on Kernel PCA transformed data
+        print("\nPerforming grid search on Kernel PCA transformed data...")
+        grid_search_results_kpca = self.perform_grid_search(X_train_kpca, train_data['y'],
+                                                            X_val_kpca, val_data['y'])
+
+        # Perform grid search on LDA transformed data
+        print("\nPerforming grid search on LDA transformed data...")
+        grid_search_results_lda = self.perform_grid_search(X_train_lda, train_data['y'],
+                                                           X_val_lda, val_data['y'])
+
+        # Print grid search results
+        print("\n" + "=" * 50)
+        print("GRID SEARCH RESULTS")
+        print("=" * 50)
+
+        for data_type, results in [("Original", grid_search_results_orig),
+                                   ("PCA", grid_search_results_pca),
+                                   ("Kernel PCA", grid_search_results_kpca),
+                                   ("LDA", grid_search_results_lda)]:
+            print(f"\n{data_type} Data Results:")
+            print("-" * 40)
+            for model, result in results.items():
+                print(f"\n{model}:")
+                print(f"Best Parameters: {result['best_params']}")
+                print(f"Best CV Score: {result['best_score']:.3f}")
+                print(f"Validation Score: {result['validation_score']:.3f}")
+
+        # Create zip file of results
+        print("\nCreating zip file of all results...")
+        zip_file_path = self.create_results_zip()
+
+        # Return results including zip file path
         return {
             'original': results_orig,
             'pca': results_pca,
             'kpca': results_kpca,
             'lda': results_lda,
-            'explained_variance_ratio': explained_variance_ratio
+            'explained_variance_ratio': explained_variance_ratio,
+            'grid_search': {
+                'original': grid_search_results_orig,
+                'pca': grid_search_results_pca,
+                'kpca': grid_search_results_kpca,
+                'lda': grid_search_results_lda
+            },
+            'zip_file': zip_file_path
         }
 
 if __name__ == "__main__":
     import time
-    import os
     from sklearn.metrics import r2_score
 
     start_time = time.time()
