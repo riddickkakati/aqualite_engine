@@ -11,6 +11,12 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import cross_val_score
 import matplotlib.pyplot as plt
 from sklearn.metrics import r2_score
+import tensorflow as tf
+from xgboost import XGBRegressor
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.tree import DecisionTreeRegressor
+from catboost import CatBoostRegressor
+from sklearn.model_selection import KFold
 
 
 def interpolate_missing_data(self, df_orig):
@@ -362,6 +368,215 @@ class ML_Model:
             'cv_std': cv_scores.std()
         }
 
+    def train_xgboost(self, X_train, y_train, X_val, y_val):
+        """Train XGBoost model and make predictions"""
+        from xgboost import XGBRegressor
+
+        # Initialize XGBoost regressor with enable_categorical=False
+        regressor = XGBRegressor(
+            n_estimators=100,
+            learning_rate=0.1,
+            max_depth=5,
+            enable_categorical=False  # Add this parameter
+        )
+
+        # Train the model
+        regressor.fit(X_train, y_train)
+
+        # Make predictions
+        train_pred = regressor.predict(X_train)
+        val_pred = regressor.predict(X_val)
+
+        # Perform k-fold cross validation
+        cv_scores = cross_val_score(regressor, X_train, y_train, cv=10)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
+    def train_random_forest(self, X_train, y_train, X_val, y_val):
+        """Train Random Forest model and make predictions"""
+
+
+        # Initialize Random Forest regressor
+        regressor = RandomForestRegressor(
+            n_estimators=100,
+            max_depth=10,
+            random_state=42
+        )
+
+        # Train the model
+        regressor.fit(X_train, y_train)
+
+        # Make predictions
+        train_pred = regressor.predict(X_train)
+        val_pred = regressor.predict(X_val)
+
+        # Perform k-fold cross validation
+        cv_scores = cross_val_score(regressor, X_train, y_train, cv=10)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
+    def train_decision_tree(self, X_train, y_train, X_val, y_val):
+        """Train Decision Tree model and make predictions"""
+
+
+        # Initialize Decision Tree regressor
+        regressor = DecisionTreeRegressor(
+            max_depth=10,
+            min_samples_split=5,
+            random_state=42
+        )
+
+        # Train the model
+        regressor.fit(X_train, y_train)
+
+        # Make predictions
+        train_pred = regressor.predict(X_train)
+        val_pred = regressor.predict(X_val)
+
+        # Perform k-fold cross validation
+        cv_scores = cross_val_score(regressor, X_train, y_train, cv=10)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
+    def train_catboost(self, X_train, y_train, X_val, y_val):
+        """Train CatBoost model and make predictions"""
+
+
+        # Initialize CatBoost regressor
+        regressor = CatBoostRegressor(
+            iterations=100,
+            learning_rate=0.1,
+            depth=6,
+            verbose=False
+        )
+
+        # Train the model
+        regressor.fit(X_train, y_train)
+
+        # Make predictions
+        train_pred = regressor.predict(X_train)
+        val_pred = regressor.predict(X_val)
+
+        # Perform k-fold cross validation
+        cv_scores = cross_val_score(regressor, X_train, y_train, cv=10)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
+    def train_polynomial(self, X_train, y_train, X_val, y_val, degree=2):
+        """Train Polynomial Regression model and make predictions"""
+        from sklearn.preprocessing import PolynomialFeatures
+        from sklearn.linear_model import LinearRegression
+
+        # Create polynomial features
+        poly_features = PolynomialFeatures(degree=degree)
+        X_train_poly = poly_features.fit_transform(X_train)
+        X_val_poly = poly_features.transform(X_val)
+
+        # Initialize and train the model
+        regressor = LinearRegression()
+        regressor.fit(X_train_poly, y_train)
+
+        # Make predictions
+        train_pred = regressor.predict(X_train_poly)
+        val_pred = regressor.predict(X_val_poly)
+
+        # Perform k-fold cross validation
+        cv_scores = cross_val_score(regressor, X_train_poly, y_train, cv=10)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
+    def train_ann(self, X_train, y_train, X_val, y_val):
+        """Train Artificial Neural Network model and make predictions"""
+        # Convert inputs to float32
+        X_train = np.asarray(X_train).astype(np.float32)
+        y_train = np.asarray(y_train).astype(np.float32)
+        X_val = np.asarray(X_val).astype(np.float32)
+        y_val = np.asarray(y_val).astype(np.float32)
+
+        # Create the ANN model
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(32, activation='relu', input_shape=(X_train.shape[1],)),
+            tf.keras.layers.Dense(16, activation='relu'),
+            tf.keras.layers.Dense(1)
+        ])
+
+        # Compile the model
+        model.compile(optimizer='adam', loss='mean_squared_error')
+
+        # Train the model
+        model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=0)
+
+        # Make predictions
+        train_pred = model.predict(X_train).flatten()
+        val_pred = model.predict(X_val).flatten()
+
+        # For cross-validation with Keras, we'll use a custom implementation
+        def get_cv_scores(X, y, n_splits=10):
+            kf = KFold(n_splits=n_splits)
+            scores = []
+
+            # Convert inputs to float32
+            X = np.asarray(X).astype(np.float32)
+            y = np.asarray(y).astype(np.float32)
+
+            for train_idx, val_idx in kf.split(X):
+                X_t, X_v = X[train_idx], X[val_idx]
+                y_t, y_v = y[train_idx], y[val_idx]
+
+                model = tf.keras.Sequential([
+                    tf.keras.layers.Dense(32, activation='relu', input_shape=(X.shape[1],)),
+                    tf.keras.layers.Dense(16, activation='relu'),
+                    tf.keras.layers.Dense(1)
+                ])
+                model.compile(optimizer='adam', loss='mean_squared_error')
+                model.fit(X_t, y_t, epochs=100, batch_size=32, verbose=0)
+
+                y_pred = model.predict(X_v).flatten()
+                scores.append(r2_score(y_v, y_pred))
+
+            return np.array(scores)
+
+        # Get cross-validation scores
+        cv_scores = get_cv_scores(X_train, y_train)
+
+        return {
+            'train_pred': train_pred,
+            'val_pred': val_pred,
+            'cv_scores': cv_scores,
+            'cv_mean': cv_scores.mean(),
+            'cv_std': cv_scores.std()
+        }
+
     def handle_nan_values(self, df):
         """Replace NaN values with climatological means."""
         import pandas as pd
@@ -476,119 +691,120 @@ class ML_Model:
             X_val_scaled, val_data['y']
         )
 
-        # Train SVR and MLR on PCA transformed data
-        svr_results_pca = self.train_svr(
-            X_train_pca, train_data['y'],
-            X_val_pca, val_data['y']
-        )
-        mlr_results_pca = self.train_mlr(
-            X_train_pca, train_data['y'],
-            X_val_pca, val_data['y']
-        )
+        # Train all models on original scaled data
+        models_orig = {
+            'svr': self.train_svr(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'mlr': self.train_mlr(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'xgboost': self.train_xgboost(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'random_forest': self.train_random_forest(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'decision_tree': self.train_decision_tree(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'catboost': self.train_catboost(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'polynomial': self.train_polynomial(X_train_scaled, train_data['y'], X_val_scaled, val_data['y']),
+            'ann': self.train_ann(X_train_scaled, train_data['y'], X_val_scaled, val_data['y'])
+        }
 
-        # Save results for original data
-        original_train_df = self.save_results_csv(
-            svr_results_orig['train_pred'],
-            train_data,
-            'calibration_svr',
-            self.owd
-        )
-        original_val_df = self.save_results_csv(
-            svr_results_orig['val_pred'],
-            val_data,
-            'validation_svr',
-            self.owd
-        )
+        # Train all models on PCA transformed data
+        models_pca = {
+            'svr': self.train_svr(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'mlr': self.train_mlr(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'xgboost': self.train_xgboost(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'random_forest': self.train_random_forest(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'decision_tree': self.train_decision_tree(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'catboost': self.train_catboost(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'polynomial': self.train_polynomial(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
+            'ann': self.train_ann(X_train_pca, train_data['y'], X_val_pca, val_data['y'])
+        }
 
-        mlr_train_df = self.save_results_csv(
-            mlr_results_orig['train_pred'],
-            train_data,
-            'calibration_mlr',
-            self.owd
-        )
-        mlr_val_df = self.save_results_csv(
-            mlr_results_orig['val_pred'],
-            val_data,
-            'validation_mlr',
-            self.owd
-        )
+        # Save results for all models with original data
+        results_orig = {}
+        for model_name, model_results in models_orig.items():
+            train_df = self.save_results_csv(
+                model_results['train_pred'],
+                train_data,
+                f'calibration_{model_name}',
+                self.owd
+            )
+            val_df = self.save_results_csv(
+                model_results['val_pred'],
+                val_data,
+                f'validation_{model_name}',
+                self.owd
+            )
 
-        # Save results for PCA data
-        pca_train_df = self.save_results_csv(
-            svr_results_pca['train_pred'],
-            train_data,
-            'calibration_svr_pca',
-            self.owd
-        )
-        pca_val_df = self.save_results_csv(
-            svr_results_pca['val_pred'],
-            val_data,
-            'validation_svr_pca',
-            self.owd
-        )
+            # Create plots for each model
+            self.plot_results(
+                train_df,
+                f'calibration_{model_name}',
+                self.owd,
+                "calib",
+                model_results['cv_mean'],
+                model_results['cv_std']
+            )
+            self.plot_results(
+                val_df,
+                f'validation_{model_name}',
+                self.owd,
+                "valid"
+            )
 
-        mlr_pca_train_df = self.save_results_csv(
-            mlr_results_pca['train_pred'],
-            train_data,
-            'calibration_mlr_pca',
-            self.owd
-        )
-        mlr_pca_val_df = self.save_results_csv(
-            mlr_results_pca['val_pred'],
-            val_data,
-            'validation_mlr_pca',
-            self.owd
-        )
+            results_orig[model_name] = {
+                'train': train_df,
+                'val': val_df,
+                'cv_scores': model_results['cv_scores'],
+                'cv_mean': model_results['cv_mean'],
+                'cv_std': model_results['cv_std']
+            }
 
-        # Create all plots
-        self.plot_results(original_train_df, 'calibration_svr', self.owd, "calib", svr_results_orig['cv_mean'], svr_results_orig['cv_std'])
-        self.plot_results(original_val_df, 'validation_svr', self.owd, "valid")
-        self.plot_results(mlr_train_df, 'calibration_mlr', self.owd, "calib", mlr_results_orig['cv_mean'], mlr_results_orig['cv_std'])
-        self.plot_results(mlr_val_df, 'validation_mlr', self.owd, "valid")
-        self.plot_results(pca_train_df, 'calibration_svr_pca', self.owd, "calib", svr_results_pca['cv_mean'], svr_results_pca['cv_std'])
-        self.plot_results(pca_val_df, 'validation_svr_pca', self.owd, "valid")
-        self.plot_results(mlr_pca_train_df, 'calibration_mlr_pca', self.owd, "calib", mlr_results_pca['cv_mean'], mlr_results_pca['cv_std'])
-        self.plot_results(mlr_pca_val_df, 'validation_mlr_pca', self.owd, "valid")
+        # Save results for all models with PCA transformed data
+        results_pca = {}
+        for model_name, model_results in models_pca.items():
+            train_df = self.save_results_csv(
+                model_results['train_pred'],
+                train_data,
+                f'calibration_{model_name}_pca',
+                self.owd
+            )
+            val_df = self.save_results_csv(
+                model_results['val_pred'],
+                val_data,
+                f'validation_{model_name}_pca',
+                self.owd
+            )
+
+            # Create plots for each model with PCA
+            self.plot_results(
+                train_df,
+                f'calibration_{model_name}_pca',
+                self.owd,
+                "calib",
+                model_results['cv_mean'],
+                model_results['cv_std']
+            )
+            self.plot_results(
+                val_df,
+                f'validation_{model_name}_pca',
+                self.owd,
+                "valid"
+            )
+
+            results_pca[model_name] = {
+                'train': train_df,
+                'val': val_df,
+                'cv_scores': model_results['cv_scores'],
+                'cv_mean': model_results['cv_mean'],
+                'cv_std': model_results['cv_std']
+            }
 
         return {
-            'original': {
-                'svr': {
-                    'train': original_train_df,
-                    'val': original_val_df,
-                    'cv_scores': svr_results_orig['cv_scores'],
-                    'cv_mean': svr_results_orig['cv_mean'],
-                    'cv_std': svr_results_orig['cv_std']
-                },
-                'mlr': {
-                    'train': mlr_train_df,
-                    'val': mlr_val_df,
-                    'cv_scores': mlr_results_orig['cv_scores'],
-                    'cv_mean': mlr_results_orig['cv_mean'],
-                    'cv_std': mlr_results_orig['cv_std']
-                }
-            },
-            'pca': {
-                'svr': {
-                    'train': pca_train_df,
-                    'val': pca_val_df,
-                    'cv_scores': svr_results_pca['cv_scores'],
-                    'cv_mean': svr_results_pca['cv_mean'],
-                    'cv_std': svr_results_pca['cv_std']
-                },
-                'mlr': {
-                    'train': mlr_pca_train_df,
-                    'val': mlr_pca_val_df,
-                    'cv_scores': mlr_results_pca['cv_scores'],
-                    'cv_mean': mlr_results_pca['cv_mean'],
-                    'cv_std': mlr_results_pca['cv_std']
-                }
-            },
+            'original': results_orig,
+            'pca': results_pca,
             'explained_variance_ratio': explained_variance_ratio
         }
 
 if __name__ == "__main__":
     import time
     import os
+    from sklearn.metrics import r2_score
 
     start_time = time.time()
 
@@ -613,31 +829,69 @@ if __name__ == "__main__":
     results = ml_model.run()
 
     if results is not None:
-        print("\nResults Summary:")
-        print("\nOriginal Data Results:")
-        print("SVR Model:")
-        print(
-            f"Training R² Score: {results['original']['svr']['cv_mean']:.3f} ± {results['original']['svr']['cv_std']:.3f}")
-        print(
-            f"Validation R² Score: {r2_score(results['original']['svr']['val']['Evaluation_(Water_temperature_data)'], results['original']['svr']['val']['Best_simulation']):.3f}")
+        print("\n" + "="*50)
+        print("Results Summary")
+        print("="*50)
 
-        print("\nMLR Model:")
-        print(
-            f"Training R² Score: {results['original']['mlr']['cv_mean']:.3f} ± {results['original']['mlr']['cv_std']:.3f}")
-        print(
-            f"Validation R² Score: {r2_score(results['original']['mlr']['val']['Evaluation_(Water_temperature_data)'], results['original']['mlr']['val']['Best_simulation']):.3f}")
+        # Function to print model results
+        def print_model_results(model_name, model_data, data_type="Original"):
+            print(f"\n{data_type} Data - {model_name} Results:")
+            print("-" * 40)
+            print(f"Training R² Score: {model_data['cv_mean']:.3f} ± {model_data['cv_std']:.3f}")
+            val_r2 = r2_score(
+                model_data['val']['Evaluation_(Water_temperature_data)'],
+                model_data['val']['Best_simulation']
+            )
+            print(f"Validation R² Score: {val_r2:.3f}")
 
-        print("\nPCA Results:")
-        print(f"Explained Variance Ratio: {results['explained_variance_ratio']}")
-        print("\nSVR Model with PCA:")
-        print(f"Training R² Score: {results['pca']['svr']['cv_mean']:.3f} ± {results['pca']['svr']['cv_std']:.3f}")
-        print(
-            f"Validation R² Score: {r2_score(results['pca']['svr']['val']['Evaluation_(Water_temperature_data)'], results['pca']['svr']['val']['Best_simulation']):.3f}")
+        # Print results for original data
+        print("\nORIGINAL DATA RESULTS:")
+        print("="*50)
+        for model_name, model_results in results['original'].items():
+            print_model_results(model_name.upper(), model_results)
 
-        print("\nMLR Model with PCA:")
-        print(f"Training R² Score: {results['pca']['mlr']['cv_mean']:.3f} ± {results['pca']['mlr']['cv_std']:.3f}")
-        print(
-            f"Validation R² Score: {r2_score(results['pca']['mlr']['val']['Evaluation_(Water_temperature_data)'], results['pca']['mlr']['val']['Best_simulation']):.3f}")
+        # Print results for PCA data
+        print("\nPCA TRANSFORMED DATA RESULTS:")
+        print("="*50)
+        print(f"\nExplained Variance Ratio: {results['explained_variance_ratio']}")
+        for model_name, model_results in results['pca'].items():
+            print_model_results(model_name.upper(), model_results, "PCA")
 
-    total_time = np.array([time.time() - start_time])[0]
-    print(f"\nTotal run time: {total_time:.2f} seconds")
+        # Find best performing model
+        best_val_r2 = -float('inf')
+        best_model = None
+        best_type = None
+
+        for data_type in ['original', 'pca']:
+            for model_name, model_results in results[data_type].items():
+                val_r2 = r2_score(
+                    model_results['val']['Evaluation_(Water_temperature_data)'],
+                    model_results['val']['Best_simulation']
+                )
+                if val_r2 > best_val_r2:
+                    best_val_r2 = val_r2
+                    best_model = model_name
+                    best_type = data_type
+
+        print("\n" + "="*50)
+        print("BEST MODEL SUMMARY")
+        print("="*50)
+        print(f"Best Performing Model: {best_model.upper()} ({'Original' if best_type == 'original' else 'PCA'} data)")
+        print(f"Best Validation R² Score: {best_val_r2:.3f}")
+        print(f"Training R² Score: {results[best_type][best_model]['cv_mean']:.3f} ± {results[best_type][best_model]['cv_std']:.3f}")
+
+        # Print execution time
+        total_time = time.time() - start_time
+        print(f"\nTotal execution time: {total_time:.2f} seconds")
+
+        # Print file locations
+        print("\n" + "="*50)
+        print("OUTPUT FILES LOCATION")
+        print("="*50)
+        results_dir = f"{ml_model.owd}/results/{ml_model.user_id}_{ml_model.group_id}/"
+        print(f"All results and plots have been saved to: {results_dir}")
+        print("\nFiles generated:")
+        print("- CSV files: results_[model]_[calibration/validation].csv")
+        print("- Plot files: [calibration/validation]_best_modelrun_[model].png")
+    else:
+        print("Error: No results were generated. Please check your input files and parameters.")
