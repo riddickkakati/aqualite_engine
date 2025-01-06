@@ -1195,20 +1195,20 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Test paths - replace with your actual file paths
-    calibration_file = '/home/riddick/Downloads/stndrck_sat_cc.txt'
-    validation_file = '/home/riddick/Downloads/stndrck_sat_cv.txt'
+    calibration_file = '/home/riddick/Downloads/SIO_2011_cc.txt'
+    validation_file = '/home/riddick/Downloads/SIO_2011_cv.txt'
 
     # Initialize ML Model
     ml_model = ML_Model(
         user_id=1,
         group_id=1,
-        model="air2water",
+        model="air2stream",
         interpolate=True,
         n_data_interpolate=7,
         validation_required="Uniform Percentage",
         percent=20,
-        air2waterusercalibrationpath=calibration_file,
-        air2wateruservalidationpath=validation_file
+        air2streamusercalibrationpath=calibration_file,
+        air2streamuservalidationpath=validation_file
     )
 
     # Run the models and get results
