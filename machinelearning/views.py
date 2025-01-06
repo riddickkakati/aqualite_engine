@@ -324,7 +324,7 @@ class MLRunViewSet(viewsets.ModelViewSet):
 
             # Update ml_run with results
             ml_run.status = "completed"
-            ml_run.results_path = results.get('zip_file')  # Store the zip file path
+            ml_run.results_path = f"{settings.MEDIA_ROOT}/ml_results/{ml_run.user_id}_{ml_run.group_id}/results_{ml_run.user_id}_{ml_run.group_id}_{ml_run.id}.zip"  # Store the zip file path
             ml_run.yaml_results_path = yaml_path  # Store YAML file path
             ml_run.end_time = timezone.now()
             ml_run.analysis_summary = analysis_summary
