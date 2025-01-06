@@ -17,6 +17,9 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.tree import DecisionTreeRegressor
 from catboost import CatBoostRegressor
 from sklearn.model_selection import KFold
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+from sklearn.preprocessing import KBinsDiscretizer
+from sklearn.decomposition import KernelPCA
 
 
 def interpolate_missing_data(self, df_orig):
@@ -208,6 +211,8 @@ class ML_Model:
         self.email_list = email_list if email_list else []
         self.scaler = StandardScaler()
         self.pca = PCA(n_components=2)
+        self.kpca = KernelPCA(n_components=2, kernel='rbf')
+        self.lda = LDA(n_components=2)
         self.owd = os.getcwd()
 
     def datetimecalc(self, dfinput):
@@ -244,6 +249,34 @@ class ML_Model:
             'dates': dates,
             'original_data': filtered_data
         }
+
+    def discretize_target(self, y_train, y_val, n_bins=5):
+        """
+        Discretize continuous target variable into classes for LDA
+
+        Parameters:
+        y_train: Training target values
+        y_val: Validation target values
+        n_bins: Number of bins for discretization
+
+        Returns:
+        y_train_discrete: Discretized training targets
+        y_val_discrete: Discretized validation targets
+        """
+        # Initialize the discretizer
+        discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='quantile')
+
+        # Reshape for sklearn
+        y_train_reshaped = np.array(y_train).reshape(-1, 1)
+        y_val_reshaped = np.array(y_val).reshape(-1, 1)
+
+        # Fit and transform training data
+        y_train_discrete = discretizer.fit_transform(y_train_reshaped)
+
+        # Transform validation data using the same bins
+        y_val_discrete = discretizer.transform(y_val_reshaped)
+
+        return y_train_discrete.ravel().astype(int), y_val_discrete.ravel().astype(int)
 
     def save_results_csv(self, predictions, data, mode, owd):
         """Save results to CSV in the required format"""
@@ -677,9 +710,21 @@ class ML_Model:
         X_train_pca = self.pca.fit_transform(X_train_scaled)
         X_val_pca = self.pca.transform(X_val_scaled)
 
-        # Calculate explained variance ratio
+        # Add Kernel PCA transformation
+        X_train_kpca = self.kpca.fit_transform(X_train_scaled)
+        X_val_kpca = self.kpca.transform(X_val_scaled)
+
+        # Add LDA transformation
+        # Discretize targets for LDA
+        y_train_discrete, y_val_discrete = self.discretize_target(train_data['y'], val_data['y'])
+
+        # Apply LDA transformation using discretized targets
+        X_train_lda = self.lda.fit_transform(X_train_scaled, y_train_discrete)
+        X_val_lda = self.lda.transform(X_val_scaled)
+
+        # Calculate explained variance ratio for PCA
         explained_variance_ratio = self.pca.explained_variance_ratio_
-        print(f"Explained variance ratio: {explained_variance_ratio}")
+        print(f"PCA explained variance ratio: {explained_variance_ratio}")
 
         # Train SVR and MLR on original scaled data
         svr_results_orig = self.train_svr(
@@ -713,6 +758,29 @@ class ML_Model:
             'catboost': self.train_catboost(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
             'polynomial': self.train_polynomial(X_train_pca, train_data['y'], X_val_pca, val_data['y']),
             'ann': self.train_ann(X_train_pca, train_data['y'], X_val_pca, val_data['y'])
+        }
+
+        models_kpca = {
+            'svr': self.train_svr(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'mlr': self.train_mlr(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'xgboost': self.train_xgboost(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'random_forest': self.train_random_forest(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'decision_tree': self.train_decision_tree(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'catboost': self.train_catboost(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'polynomial': self.train_polynomial(X_train_kpca, train_data['y'], X_val_kpca, val_data['y']),
+            'ann': self.train_ann(X_train_kpca, train_data['y'], X_val_kpca, val_data['y'])
+        }
+
+        # Add training with LDA transformed data
+        models_lda = {
+            'svr': self.train_svr(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'mlr': self.train_mlr(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'xgboost': self.train_xgboost(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'random_forest': self.train_random_forest(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'decision_tree': self.train_decision_tree(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'catboost': self.train_catboost(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'polynomial': self.train_polynomial(X_train_lda, train_data['y'], X_val_lda, val_data['y']),
+            'ann': self.train_ann(X_train_lda, train_data['y'], X_val_lda, val_data['y'])
         }
 
         # Save results for all models with original data
@@ -795,9 +863,88 @@ class ML_Model:
                 'cv_std': model_results['cv_std']
             }
 
+        results_kpca = {}
+        for model_name, model_results in models_kpca.items():
+            train_df = self.save_results_csv(
+                model_results['train_pred'],
+                train_data,
+                f'calibration_{model_name}_kpca',
+                self.owd
+            )
+            val_df = self.save_results_csv(
+                model_results['val_pred'],
+                val_data,
+                f'validation_{model_name}_kpca',
+                self.owd
+            )
+
+            self.plot_results(
+                train_df,
+                f'calibration_{model_name}_kpca',
+                self.owd,
+                "calib",
+                model_results['cv_mean'],
+                model_results['cv_std']
+            )
+            self.plot_results(
+                val_df,
+                f'validation_{model_name}_kpca',
+                self.owd,
+                "valid"
+            )
+
+            results_kpca[model_name] = {
+                'train': train_df,
+                'val': val_df,
+                'cv_scores': model_results['cv_scores'],
+                'cv_mean': model_results['cv_mean'],
+                'cv_std': model_results['cv_std']
+            }
+
+        # Save results for LDA
+        results_lda = {}
+        for model_name, model_results in models_lda.items():
+            train_df = self.save_results_csv(
+                model_results['train_pred'],
+                train_data,
+                f'calibration_{model_name}_lda',
+                self.owd
+            )
+            val_df = self.save_results_csv(
+                model_results['val_pred'],
+                val_data,
+                f'validation_{model_name}_lda',
+                self.owd
+            )
+
+            self.plot_results(
+                train_df,
+                f'calibration_{model_name}_lda',
+                self.owd,
+                "calib",
+                model_results['cv_mean'],
+                model_results['cv_std']
+            )
+            self.plot_results(
+                val_df,
+                f'validation_{model_name}_lda',
+                self.owd,
+                "valid"
+            )
+
+            results_lda[model_name] = {
+                'train': train_df,
+                'val': val_df,
+                'cv_scores': model_results['cv_scores'],
+                'cv_mean': model_results['cv_mean'],
+                'cv_std': model_results['cv_std']
+            }
+
         return {
             'original': results_orig,
             'pca': results_pca,
+            'kpca': results_kpca,
+            'lda': results_lda,
             'explained_variance_ratio': explained_variance_ratio
         }
 
@@ -809,20 +956,20 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Test paths - replace with your actual file paths
-    calibration_file = '/home/riddick/Downloads/SIO_2011_cc.txt'
-    validation_file = '/home/riddick/Downloads/SIO_2011_cv.txt'
+    calibration_file = '/home/riddick/Downloads/stndrck_sat_cc.txt'
+    validation_file = '/home/riddick/Downloads/stndrck_sat_cv.txt'
 
     # Initialize ML Model
     ml_model = ML_Model(
         user_id=1,
         group_id=1,
-        model="air2stream",
+        model="air2water",
         interpolate=True,
         n_data_interpolate=7,
         validation_required="Uniform Percentage",
         percent=20,
-        air2streamusercalibrationpath=calibration_file,
-        air2streamuservalidationpath=validation_file
+        air2waterusercalibrationpath=calibration_file,
+        air2wateruservalidationpath=validation_file
     )
 
     # Run the models and get results
@@ -856,6 +1003,18 @@ if __name__ == "__main__":
         print(f"\nExplained Variance Ratio: {results['explained_variance_ratio']}")
         for model_name, model_results in results['pca'].items():
             print_model_results(model_name.upper(), model_results, "PCA")
+
+        # Print results for Kernel PCA data
+        print("\nKERNEL PCA TRANSFORMED DATA RESULTS:")
+        print("=" * 50)
+        for model_name, model_results in results['kpca'].items():
+            print_model_results(model_name.upper(), model_results, "Kernel PCA")
+
+        # Print results for LDA data
+        print("\nLDA TRANSFORMED DATA RESULTS:")
+        print("=" * 50)
+        for model_name, model_results in results['lda'].items():
+            print_model_results(model_name.upper(), model_results, "LDA")
 
         # Find best performing model
         best_val_r2 = -float('inf')
