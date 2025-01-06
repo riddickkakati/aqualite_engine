@@ -763,31 +763,77 @@ class ML_Model:
 
     def create_results_zip(self):
         """Create a zip file of all results"""
+        import os
+        import zipfile
+        import time
+        import shutil
+        from datetime import datetime
 
         # Create the results directory path
         results_dir = f"{self.owd}/results/{self.user_id}_{self.group_id}/"
 
-        zip_filename = f"{self.owd}/results/{self.user_id}_{self.group_id}/results_{self.user_id}_{self.group_id}.zip"
+        zip_filename = f"{results_dir}results_{self.user_id}_{self.group_id}.zip"
+
+        # Create a temporary directory to copy files
+        temp_dir = f"{results_dir}temp_{self.user_id}_{self.group_id}"
 
         try:
-            # Create zip file
-            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                # Walk through the results directory
-                for root, dirs, files in os.walk(results_dir):
-                    for file in files:
-                        # Get the full path of the file
-                        file_path = os.path.join(root, file)
-                        # Get the relative path for the archive
-                        rel_path = os.path.relpath(file_path, results_dir)
-                        # Add file to zip
-                        zipf.write(file_path, rel_path)
+            # First, create a temporary directory
+            os.makedirs(temp_dir, exist_ok=True)
 
-            print(f"\nResults have been zipped successfully to: {zip_filename}")
-            return zip_filename
+            # Wait a moment to ensure all files are fully written
+            time.sleep(2)
+
+            # Copy all files to temporary directory
+            print("Copying files to temporary directory...")
+            for root, dirs, files in os.walk(results_dir):
+                for file in files:
+                    # Skip if it's a zip file
+                    if file.endswith('.zip'):
+                        continue
+
+                    src_path = os.path.join(root, file)
+                    # Create relative path
+                    rel_path = os.path.relpath(src_path, results_dir)
+                    dst_path = os.path.join(temp_dir, rel_path)
+
+                    # Create necessary directories
+                    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+
+                    # Copy file
+                    try:
+                        shutil.copy2(src_path, dst_path)
+                    except Exception as e:
+                        print(f"Warning: Could not copy {file}: {str(e)}")
+
+            # Create zip file from temporary directory
+            print("Creating zip file...")
+            with zipfile.ZipFile(zip_filename, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, temp_dir)
+                        try:
+                            zipf.write(file_path, arcname)
+                            print(f"added file {file}")
+                        except Exception as e:
+                            print(f"Warning: Could not add {file} to zip: {str(e)}")
+
+            print(f"Results have been zipped successfully to: {zip_filename}")
 
         except Exception as e:
-            print(f"\nError creating zip file: {str(e)}")
+            print(f"Error creating zip file: {str(e)}")
             return None
+
+        finally:
+            # Clean up temporary directory
+            try:
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+            except Exception as e:
+                print(f"Warning: Could not remove temporary directory: {str(e)}")
+
+        return zip_filename
 
     def run(self):
         """Main execution method"""
