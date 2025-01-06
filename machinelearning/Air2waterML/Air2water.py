@@ -21,6 +21,9 @@ from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.preprocessing import KBinsDiscretizer
 from sklearn.decomposition import KernelPCA
 import zipfile
+import time
+import shutil
+
 
 
 def interpolate_missing_data(self, df_orig):
@@ -214,7 +217,8 @@ class ML_Model:
         self.pca = PCA(n_components=2)
         self.kpca = KernelPCA(n_components=2, kernel='rbf')
         self.lda = LDA(n_components=2)
-        self.owd = os.getcwd()
+        self.owd = settings.MEDIA_ROOT
+
 
     def datetimecalc(self, dfinput):
         """Calculate datetime and normalized day of year from input data"""
@@ -291,7 +295,7 @@ class ML_Model:
 
         ######REMOVE OWD AND OSMAKEDIRS PART
 
-        results_dir = f"{owd}/results/{self.user_id}_{self.group_id}/"
+        results_dir = f"{owd}/ml_results/{self.user_id}_{self.group_id}/"
         os.makedirs(results_dir, exist_ok=True)
         filepath = f"{results_dir}results_{self.sim_id}_{mode}.csv"
         df.to_csv(filepath, index=False)
@@ -350,7 +354,7 @@ class ML_Model:
         plt.ylabel("Temperature")
         plt.legend(loc="upper right")
 
-        filepath = f"{owd}/results/{self.user_id}_{self.group_id}/{mode}_best_modelrun_{self.sim_id}.png"
+        filepath = f"{owd}/ml_results/{self.user_id}_{self.group_id}/{mode}_best_modelrun_{self.sim_id}.png"
         fig.savefig(filepath, dpi=100)
         plt.close()
 
@@ -763,16 +767,13 @@ class ML_Model:
 
     def create_results_zip(self):
         """Create a zip file of all results"""
-        import os
-        import zipfile
-        import time
-        import shutil
-        from datetime import datetime
+
 
         # Create the results directory path
-        results_dir = f"{self.owd}/results/{self.user_id}_{self.group_id}/"
 
-        zip_filename = f"{results_dir}results_{self.user_id}_{self.group_id}.zip"
+        results_dir = f"{settings.MEDIA_ROOT}/ml_results/{self.user_id}_{self.group_id}/"
+
+        zip_filename = f"{results_dir}results_{self.user_id}_{self.group_id}_{self.sim_id}.zip"
 
         # Create a temporary directory to copy files
         temp_dir = f"{results_dir}temp_{self.user_id}_{self.group_id}"
@@ -1189,9 +1190,6 @@ class ML_Model:
         }
 
 if __name__ == "__main__":
-    import time
-    from sklearn.metrics import r2_score
-
     start_time = time.time()
 
     # Test paths - replace with your actual file paths

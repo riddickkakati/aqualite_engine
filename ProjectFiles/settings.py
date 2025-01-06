@@ -43,7 +43,9 @@ INSTALLED_APPS = [
     "corsheaders",
     "forecasting",
     "forecasting.air2water",
-    "monitoring"
+    "monitoring",
+    "machinelearning",
+    "machinelearning.Air2waterML"
 ]
 
 MIDDLEWARE = [

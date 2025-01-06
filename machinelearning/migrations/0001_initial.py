@@ -2,7 +2,7 @@
 
 import django.core.validators
 import django.db.models.deletion
-import monitoring.models
+import machinelearning.models
 from django.conf import settings
 from django.db import migrations, models
 
@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="MonitoringGroup",
+            name="MLGroup",
             fields=[
                 (
                     "id",
@@ -38,7 +38,7 @@ class Migration(migrations.Migration):
             },
         ),
         migrations.CreateModel(
-            name="MonitoringComment",
+            name="MLComment",
             fields=[
                 (
                     "id",
@@ -55,7 +55,7 @@ class Migration(migrations.Migration):
                     "user",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_user_comments",
+                        related_name="machine_learning_user_comments",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
@@ -63,14 +63,14 @@ class Migration(migrations.Migration):
                     "group",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_comments",
-                        to="monitoring.monitoringgroup",
+                        related_name="machine_learning_comments",
+                        to="machinelearning.mlgroup",
                     ),
                 ),
             ],
         ),
         migrations.CreateModel(
-            name="MonitoringRun",
+            name="MLRun",
             fields=[
                 (
                     "id",
@@ -81,52 +81,73 @@ class Migration(migrations.Migration):
                         verbose_name="ID",
                     ),
                 ),
-                ("start_date", models.DateField()),
-                ("end_date", models.DateField()),
-                ("longitude", models.FloatField()),
-                ("latitude", models.FloatField()),
                 (
-                    "satellite",
-                    models.CharField(
-                        choices=[("L", "Landsat"), ("S", "Sentinel")], max_length=1
+                    "timeseries_file",
+                    models.FileField(
+                        upload_to=machinelearning.models.timeseries_upload_path_handler,
+                        validators=[
+                            django.core.validators.FileExtensionValidator(
+                                allowed_extensions=["txt"]
+                            )
+                        ],
                     ),
                 ),
                 (
-                    "parameter",
-                    models.CharField(
-                        choices=[("C", "CHLA"), ("T", "TURBIDITY"), ("D", "DO")],
-                        max_length=1,
-                    ),
-                ),
-                ("cloud_cover", models.IntegerField(default=7)),
-                (
-                    "service_account",
-                    models.CharField(
-                        default="your-service-account@project.iam.gserviceaccount.com",
-                        max_length=255,
-                    ),
-                ),
-                (
-                    "service_key_file",
+                    "validation_file",
                     models.FileField(
                         blank=True,
                         null=True,
-                        upload_to=monitoring.models.service_key_path_handler,
+                        upload_to=machinelearning.models.user_validation_path_handler,
                         validators=[
                             django.core.validators.FileExtensionValidator(
-                                allowed_extensions=["json"]
+                                allowed_extensions=["txt"]
                             )
                         ],
+                    ),
+                ),
+                ("interpolate", models.BooleanField(default=True)),
+                (
+                    "n_data_interpolate",
+                    models.IntegerField(blank=True, default=7, null=True),
+                ),
+                (
+                    "validation_required",
+                    models.CharField(
+                        choices=[
+                            ("F", "False"),
+                            ("R", "Random_Percentage"),
+                            ("U", "Uniform_Percentage"),
+                            ("N", "Uniform_Number"),
+                        ],
+                        max_length=1,
+                    ),
+                ),
+                (
+                    "percent",
+                    models.IntegerField(
+                        default=10,
+                        validators=[
+                            django.core.validators.MinValueValidator(1),
+                            django.core.validators.MaxValueValidator(50),
+                        ],
+                    ),
+                ),
+                (
+                    "model",
+                    models.CharField(
+                        choices=[("W", "Air2water"), ("S", "Air2stream")], max_length=1
                     ),
                 ),
                 ("status", models.CharField(default="pending", max_length=20)),
                 ("start_time", models.DateTimeField(auto_now_add=True)),
                 ("end_time", models.DateTimeField(blank=True, null=True)),
                 ("updated_at", models.DateTimeField(auto_now=True)),
+                ("email_send", models.BooleanField(default=False)),
+                ("email_list", models.CharField(blank=True, max_length=50)),
                 (
                     "results_path",
                     models.TextField(
-                        blank=True, help_text="Stores the Folium map HTML", null=True
+                        blank=True, help_text="Stores the zip file", null=True
                     ),
                 ),
                 ("error_message", models.TextField(blank=True, null=True)),
@@ -134,22 +155,22 @@ class Migration(migrations.Migration):
                     "group",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_group",
-                        to="monitoring.monitoringgroup",
+                        related_name="machine_learning_group",
+                        to="machinelearning.mlgroup",
                     ),
                 ),
                 (
                     "user",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_runs",
+                        related_name="machine_learning_runs",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
             ],
         ),
         migrations.CreateModel(
-            name="MonitoringMember",
+            name="MLMember",
             fields=[
                 (
                     "id",
@@ -166,15 +187,15 @@ class Migration(migrations.Migration):
                     "group",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_members",
-                        to="monitoring.monitoringgroup",
+                        related_name="machine_learning_members",
+                        to="machinelearning.mlgroup",
                     ),
                 ),
                 (
                     "user",
                     models.ForeignKey(
                         on_delete=django.db.models.deletion.CASCADE,
-                        related_name="monitoring_members_of",
+                        related_name="machine_learning_members_of",
                         to=settings.AUTH_USER_MODEL,
                     ),
                 ),
