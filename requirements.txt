@@ -2,8 +2,6 @@ absl-py==2.1.0
 asgiref==3.8.1
 astunparse==1.6.3
 attrs==24.3.0
-boto3==1.35.93
-botocore==1.35.93
 branca==0.8.1
 cachetools==5.5.0
 catboost==1.2.7
@@ -64,7 +62,6 @@ plotly==5.24.1
 prettytable==3.12.0
 proto-plus==1.25.0
 protobuf==5.29.2
-psycopg2-binary==2.9.10
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 pycup==0.1.7.2
