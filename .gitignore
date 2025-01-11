@@ -22,7 +22,6 @@ var/
 wheels/
 catboost_info/
 mediafiles/
-fortran_modules
 share/python-wheels/
 *.egg-info/
 .installed.cfg
