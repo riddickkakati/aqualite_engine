@@ -21,6 +21,7 @@ sdist/
 var/
 wheels/
 catboost_info/
+fortran_modules/
 mediafiles/
 share/python-wheels/
 *.egg-info/
